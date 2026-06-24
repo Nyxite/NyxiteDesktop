@@ -1,40 +1,57 @@
 # Nyxite Desktop — Features
 
-Avalonia (C#) client for Windows and Linux.
+Avalonia (C#) client for Windows and Linux. Shares domain models, DTOs, encryption, and CRDT code with the server.
+
+**Privacy first / full E2EE.** Encryption, decryption, CRDT merge, and snapshotting happen **on the client**. The server only ever sees ciphertext. The desktop holds the user's keys, decrypts content for display, and re-encrypts edits before upload. With room for the full local corpus, the desktop is the **primary full-text search surface** and the reference for "search everything."
 
 ## Editing
 
 - Markdown, handwritten ink, and plain-text editors
+- View and edit modes
 
 ## Organization
 
-- Project and folder navigation
+- Project and folder navigation (names decrypted locally; stored encrypted on the server)
 
 ## Sync
 
 - Per-file sync policy controls: server-default, pinned-local, excluded
-- Local storage for pinned-local and excluded files
-- Offline editing
+- Local storage for pinned-local and excluded files; offline editing
+- Content is encrypted locally before upload and decrypted after download (the server moves ciphertext only)
 
 ## Collaboration
 
-- Live collaborative editing (shares the Ycs CRDT implementation with the server)
+- Live collaborative editing — **client-side CRDT merge** (ydotnet, shared with the server's CRDT glue); the server is a blind **encrypted relay**
+- The client produces the **encrypted snapshots** that compact the update log and feed version history (the server cannot, since it can't read the log)
+
+## Search
+
+- **Client-side** full-text search over the full local corpus (e.g. a local encrypted index); the primary, complete search experience across the platform
 
 ## Version history
 
-- Browse version history and view diffs
+- Browse version history with **client-side diffs** (snapshots decrypted and diffed locally); restore
 
 ## Sharing
 
-- Create and manage share links
+- Create and manage share links (link key in the URL fragment; account shares wrap the file key to the recipient's public key via HPKE)
+
+## Encryption & keys
+
+- Local AES-256-GCM content encryption and HPKE wrap/unwrap, via the shared C# crypto code
+- Device enrollment and identity-key handling; user-held recovery-key flow; keys protected by the OS keystore where available
 
 ## Authentication
 
-- Keycloak login with TOTP
+- Keycloak login with TOTP (account auth; decryption governed by local keys)
 
 ## Open questions
 
-- Sync policy semantics on the client: pinned-local = always-offline + synced; excluded = device-only, never uploaded? (from spec; default: as written)
-- Offline conflict handling for last-write-wins content (ink and binary) on reconnect
-- Ink capture and on-disk format — define once and share with Android for parity
-- Ycs version and compatibility contract between desktop and server as both evolve
+See [../docs/OPEN-DECISIONS.md](../docs/OPEN-DECISIONS.md). Desktop-specific:
+
+- Local key storage (DPAPI on Windows / Secret Service or keyring on Linux), device enrollment, and recovery-key UX
+- Offline conflict handling for last-write-wins content (ink/binary) on reconnect
+- Client-side snapshot/compaction policy for the encrypted CRDT log (thresholds, who snapshots)
+- Local full-text index technology and incremental update as encrypted content syncs in
+- Ink capture and on-disk **encrypted** vector stroke format — define once and share with Android
+- ydotnet binding maturity — validate early (community-maintained); now used for client-side merge and snapshotting
