@@ -23,7 +23,7 @@ The server-side threat model is covered by [server 13](https://github.com/Nyxite
 - **Root of trust**: the **OS keystore** (DPAPI `CurrentUser` on Windows / Secret Service on Linux) wraps the DB master key and the identity-key store ([07 §7.2](07-key-and-device-management.md)). Because these unseal on OS login, the **app lock** factor (OS credential / Windows Hello / Argon2id app passphrase) is what protects keys at rest beyond the login boundary — **default on, 10-minute idle window** (configurable 1–60 min, or every-launch), consistent with [07 §7.2](07-key-and-device-management.md) and [§17.3](#173-app-lock).
 - **DB at rest**: SQLCipher with the keystore-protected passphrase; covers structure, decrypted names, metadata, and the FTS index. With multi-account ([14 §14.7](14-authentication.md)) there is **one DB and one master key per account**, so a compromise scoped to one account's key cannot read another's data; account removal destroys that account's DB, cache, index, tokens, and keystore-wrapped keys.
 - **Blob store**: ciphertext is safe as-is; decrypted kept plaintext lives in the app-private store and is treated as sensitive (excluded from backup, evictable, cleared on "forget account/device"). The full corpus being present makes disciplined at-rest handling especially important.
-- **Tokens**: OIDC tokens in the OS keystore, never in the DB/logs ([14](14-authentication.md)).
+- **Tokens**: the server's access/refresh tokens in the OS keystore, never in the DB/logs ([14](14-authentication.md)).
 - **Recovery key & fragment keys**: never persisted in plaintext; recovery phrase shown once with copy/confirm and hard warnings ([07 §7.4](07-key-and-device-management.md)).
 
 ## 17.3 App lock

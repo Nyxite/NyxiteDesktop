@@ -47,7 +47,7 @@ The desktop therefore gets byte-for-byte crypto and CRDT compatibility **by cons
 | 11 | [search.md](11-search.md) | **Full-corpus** on-device FTS; the platform's complete search surface |
 | 12 | [version-history.md](12-version-history.md) | Snapshot fetch, client-side diff, restore |
 | 13 | [sharing.md](13-sharing.md) | Account shares (HPKE), link shares (URL fragment), revocation |
-| 14 | [authentication.md](14-authentication.md) | Keycloak OIDC + PKCE + TOTP, token storage, refresh, multi-account |
+| 14 | [authentication.md](14-authentication.md) | Native auth (password + TOTP, passkeys) by default; enterprise Keycloak OIDC + PKCE pluggable; token storage, refresh, multi-account |
 | 15 | [ui-and-navigation.md](15-ui-and-navigation.md) | Windows, navigation, Avalonia/Fluent, accessibility, tray |
 | 16 | [offline-and-storage-policies.md](16-offline-and-storage-policies.md) | Full-corpus keep, convenience cache, excluded, **plaintext export / external-editor interop** |
 | 17 | [security.md](17-security.md) | Desktop threat model, at-rest protection, app lock, secure handling |

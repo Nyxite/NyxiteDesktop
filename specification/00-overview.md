@@ -45,7 +45,7 @@ The desktop is the workhorse: the surface where a power user keeps the whole lib
 
 v1.0.0 is the **complete E2EE desktop client** spanning Phases 0–6 of the master roadmap, built in the same phase order as the server (see [20-roadmap.md](20-roadmap.md)). The key/device/recovery subsystem is foundational (Phase 0) and is never retrofitted later.
 
-Explicitly **in scope**: markdown + plaintext + ink editing, the server sync policies (`server-default`/`excluded`) plus client-local keep-on-device, encrypted relay collaboration with guests, account + link sharing, rotation-based revocation, version history with client diffs/restore, **full-corpus** on-device search, Keycloak login with TOTP, device enrollment and recovery-key flows, on-device key storage via the **OS keystore** (Windows DPAPI / Linux Secret Service), **multiple accounts / instance switching** (per-account isolated storage and keys, [14 §14.7](14-authentication.md)), and **controlled plaintext export / external-editor interop** ([16 §16.7](16-offline-and-storage-policies.md)).
+Explicitly **in scope**: markdown + plaintext + ink editing, the server sync policies (`server-default`/`excluded`) plus client-local keep-on-device, encrypted relay collaboration with guests, account + link sharing, rotation-based revocation, version history with client diffs/restore, **full-corpus** on-device search, native auth (password + TOTP, or passkeys) with enterprise Keycloak/OIDC SSO as a pluggable option, device enrollment and recovery-key flows, on-device key storage via the **OS keystore** (Windows DPAPI / Linux Secret Service), **multiple accounts / instance switching** (per-account isolated storage and keys, [14 §14.7](14-authentication.md)), and **controlled plaintext export / external-editor interop** ([16 §16.7](16-offline-and-storage-policies.md)).
 
 Explicitly **out of scope for v1.0.0** (deferred, matching server Phase 5–6 and the separate migration item): office-document and source-code content types, image attachments, chunked upload for very large binaries, key-transparency/safety-number verification, metadata-graph hiding, and Samsung Notes `.sdoc` import. These are noted where they touch the architecture so seams exist for them.
 
@@ -67,11 +67,11 @@ macOS is **not planned** (the canonical surface list is Windows + Linux). It wou
 
 | Actor | On Desktop |
 |-------|-----------|
-| **User** | Signs in via Keycloak (OIDC + TOTP), enrolls the device, holds the identity keypair, owns/edits/shares files. |
-| **Guest** | This app acting on a link share: no Keycloak account, file key taken from the URL fragment, relay access via a short-lived share token. The app can both *open* an incoming link and *create* link shares. |
+| **User** | Signs in with native auth (password + TOTP, or a passkey) against the Nyxite server — or via enterprise Keycloak SSO where configured — enrolls the device, holds the identity keypair, owns/edits/shares files. |
+| **Guest** | This app acting on a link share: no Nyxite account, file key taken from the URL fragment, relay access via a short-lived share token. The app can both *open* an incoming link and *create* link shares. |
 | **Peer** | Another user/guest editing the same document; seen through presence/awareness over the relay. |
 | **Server** | Blind relay/store. The client treats every byte it sends as ciphertext the server cannot read. |
-| **Keycloak** | External IdP for account auth and TOTP. |
+| **Keycloak** | Optional **enterprise** external IdP (pluggable OIDC SSO); not the default — native server-owned auth is ([14](14-authentication.md)). |
 | **External editor** | An OS app the user explicitly opens an exported plaintext working copy in ([16 §16.7](16-offline-and-storage-policies.md)); outside the encryption boundary by user choice. |
 
 ## 0.7 Glossary (client-facing)
@@ -93,7 +93,7 @@ macOS is **not planned** (the canonical surface list is Windows + Linux). It wou
 
 | Phase | Desktop deliverable |
 |-------|---------------------|
-| 0 | App shell + navigation; account-scoped DI + per-account encrypted SQLite DB/keys/cache; Keycloak login + TOTP; device enrollment, identity keys in the OS keystore, recovery-key UX; structure browsing with encrypted names; local encrypted DB. |
+| 0 | App shell + navigation; account-scoped DI + per-account encrypted SQLite DB/keys/cache; native auth (password + TOTP, passkeys) with enterprise Keycloak/OIDC pluggable; device enrollment, identity keys in the OS keystore, recovery-key UX; structure browsing with encrypted names; local encrypted DB. |
 | 1 | Markdown + plaintext editing on the encrypted CRDT (single user offline-first), blob sync, server sync policies (server-default/excluded) + client-local keep-on-device, on-demand download, view/edit modes, **full-corpus** on-device search. |
 | 2 | Live relay collaboration (client-side merge), account + link sharing, guest mode, rotation-based revocation, version history with client diffs + restore; reference snapshotting. |
 | 3 | Pen/stylus ink capture + the shared encrypted vector stroke format, LWW/version-vector ink sync (encrypted blobs). |

@@ -12,7 +12,7 @@ Avalonia 11 + Fluent theme, a resizable multi-window desktop layout, with the ed
 
 ### Top-level destinations
 
-- **Auth** — `Login`, TOTP step (delegated to Keycloak in the system browser), `DeviceEnroll`, `DeviceApprove`, `RecoverySetup`, `RecoveryRestore`.
+- **Auth** — `Login` (native: password or passkey/WebAuthn), `TOTP` step (native, verified by the Nyxite server), with **enterprise Keycloak SSO** as an optional path (system browser), `DeviceEnroll`, `DeviceApprove`, `RecoverySetup`, `RecoveryRestore`.
 - **Browse** — `Projects`, `ProjectDetail`, `Folder` (file/folder list), `Search`.
 - **Editor** — `TextEditor(fileId)`, `InkEditor(fileId)` (chosen by `contentType`), in tabs/windows.
 - **History** — `Versions(fileId)`, `DiffViewer(fileId, fromSeq, toSeq)`.

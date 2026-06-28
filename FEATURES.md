@@ -16,6 +16,8 @@ Avalonia (C#) client for Windows and Linux. Shares domain models, DTOs, encrypti
 ## Sync
 
 - Per-file sync policy controls: server-default, excluded — plus a client-local "keep on device" pin the zero-knowledge server never sees
+- **Background auto-sync service** — auto-pulls server changes, configurable per project/folder/file (the client-local cascade; the server never sees it)
+- **Plaintext-at-rest (desktop only)** — optional toggle to keep synced files as **plaintext on local disk**, tri-state (`inherit` / `plaintext` / `encrypted`) cascading per project/folder/file, root default encrypted. Client-local only; the server still stores ciphertext. For toggled scopes plaintext **replaces** the local copy; **version history stays encrypted**; §15 data-safety applies (server ciphertext is the durable backstop, integrity-checked on read). (See [SPECIFICATION §6, §15](../docs/SPECIFICATION.md).)
 - Local storage for pinned and excluded files; offline editing
 - Content is encrypted locally before upload and decrypted after download (the server moves ciphertext only)
 
@@ -43,7 +45,7 @@ Avalonia (C#) client for Windows and Linux. Shares domain models, DTOs, encrypti
 
 ## Authentication
 
-- Keycloak login with TOTP (account auth; decryption governed by local keys)
+- **Native login** — password + required TOTP, or **passkeys (WebAuthn)** (account auth; decryption governed by local keys). Enterprise Keycloak/OIDC SSO is a pluggable option. (See [SPECIFICATION §10](../docs/SPECIFICATION.md).)
 
 ## Open questions
 

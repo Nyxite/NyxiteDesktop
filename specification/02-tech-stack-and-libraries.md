@@ -67,7 +67,8 @@ The on-disk/on-wire **ink stroke format** is a Nyxite-defined, versioned, encryp
 | JSON | **`System.Text.Json`** | Source-gen serializers; matches `Nyxite.Contracts` DTOs (metadata is JSON, content bodies are binary). |
 | Resilience | **`Microsoft.Extensions.Http.Resilience`** / Polly | Backoff/retry honoring `Retry-After`, circuit-breaking ([05 §5.2](05-api-client.md)). |
 | Realtime | **`Microsoft.Aspnetcore.SignalR.Client`** (the official .NET client) | The server's relay is SignalR `RelayHub` ([09](09-realtime-collaboration.md)). First-class — no RxJava bridge needed, unlike Android. |
-| OIDC/auth | **`IdentityModel.OidcClient`** (Authorization Code + PKCE) with a loopback/`nyxite://` redirect | Keycloak login in the system browser ([14](14-authentication.md)). |
+| Native auth | Direct API calls (`HttpClient`) for password + TOTP submission, plus a **WebAuthn/passkey** integration for register/assert ceremonies | **Default** login against the Nyxite server ([14 §14.1](14-authentication.md)). |
+| OIDC/auth (enterprise) | **`IdentityModel.OidcClient`** (Authorization Code + PKCE) with a loopback/`nyxite://` redirect | **Enterprise** Keycloak SSO login in the system browser; resolves to the server's own token ([14](14-authentication.md)). |
 
 ## 2.7 Cryptography (shared, not re-chosen)
 

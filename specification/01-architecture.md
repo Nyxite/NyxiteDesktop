@@ -82,7 +82,7 @@ Repository interfaces (`IFileRepository`, `IStructureRepository`, `IKeyRepositor
 | `CrdtEngine` | Apply/encode Yrs updates, state vectors, snapshots | **`Nyxite.Crdt`** / ydotnet ([09](09-realtime-collaboration.md)) |
 | `KeyStoreVault` | Wrap/unwrap the DB master key & identity-key store under an OS-keystore secret | DPAPI / Secret Service ([07](07-key-and-device-management.md)) |
 | `BlobStore` | Store/evict kept ciphertext and decrypted blobs (ink/binary) | App-private filesystem ([16](16-offline-and-storage-policies.md)) |
-| `AuthManager` | OIDC tokens, refresh, share-token minting | OIDC (`IdentityModel.OidcClient`) ([14](14-authentication.md)) |
+| `AuthManager` | Server tokens (access/refresh), refresh, share-token minting | Native auth (password + TOTP / passkey) by default; enterprise Keycloak OIDC via `IdentityModel.OidcClient` ([14](14-authentication.md)) |
 
 ## 1.6 Threading & background work
 
@@ -106,4 +106,4 @@ Repository interfaces (`IFileRepository`, `IStructureRepository`, `IKeyRepositor
 
 **`Microsoft.Extensions.DependencyInjection`** (via the Generic Host) wires the graph. Lifetimes: `Singleton` for stateless engines and process-wide infrastructure; transient/scoped ViewModels per screen; and an **account scope** for everything tenant-specific.
 
-Because the app is **multi-account from v1.0.0** ([14 §14.7](14-authentication.md)), per-account state must not leak across accounts. An **account scope** (a child `IServiceScope` keyed by `accountId`) owns that account's **`UserSession`** (the unlocked identity-key handle, created after login + key-unlock and cleared on lock/logout/switch), its OIDC tokens, its repositories, and its account-scoped data sources (the account's SQLCipher DB connection, `BlobStore` subtree, FTS index). The active account's scope is created on switch-in and disposed — **zeroizing in-memory key material** — on switch-out. No use case can touch decrypted key material before unlock, and no account can read another's data. See [04 §4.1](04-local-data-model.md), [07](07-key-and-device-management.md), and [17](17-security.md).
+Because the app is **multi-account from v1.0.0** ([14 §14.7](14-authentication.md)), per-account state must not leak across accounts. An **account scope** (a child `IServiceScope` keyed by `accountId`) owns that account's **`UserSession`** (the unlocked identity-key handle, created after login + key-unlock and cleared on lock/logout/switch), its server tokens, its repositories, and its account-scoped data sources (the account's SQLCipher DB connection, `BlobStore` subtree, FTS index). The active account's scope is created on switch-in and disposed — **zeroizing in-memory key material** — on switch-out. No use case can touch decrypted key material before unlock, and no account can read another's data. See [04 §4.1](04-local-data-model.md), [07](07-key-and-device-management.md), and [17](17-security.md).

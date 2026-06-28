@@ -8,7 +8,7 @@
 
 ## 18.2 Configuration
 
-- Instance host (API base, OIDC authority, public-share base) configurable per account via settings ([05](05-api-client.md), [14](14-authentication.md)); default `nyxite.app`. No secrets in the artifact beyond the OIDC **public** client id (PKCE, no client secret on a desktop app).
+- Instance host (API base, public-share base, plus an OIDC authority for enterprise-SSO instances) configurable per account via settings ([05](05-api-client.md), [14](14-authentication.md)); default `nyxite.app`. No secrets in the artifact; the only auth config that ships is, for enterprise Keycloak instances, the OIDC **public** client id (PKCE, no client secret on a desktop app) — native auth needs no embedded secret.
 
 ## 18.3 Module/build hygiene
 
