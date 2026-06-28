@@ -49,7 +49,7 @@ Client → server hub methods:
 
 ## 9.6 Snapshotting & compaction (client-driven)
 
-The server can't compact an encrypted log. **The client periodically snapshots**: serialize the merged Yrs doc, `Seal` it with the FK, upload as a content-addressed blob + create a `file_versions` row ([12](12-version-history.md)). Triggers: **≥ 200 updates since the last snapshot**, **a 5-minute time threshold**, or the **last participant leaving** the room. Run in `SnapshotService`; any participant may snapshot; the server may then prune updates older than the snapshot's `seq` (keeping enough for in-flight clients).
+The server can't compact an encrypted log. **The client periodically snapshots**: serialize the merged Yrs doc, `Seal` it with the FK, upload as a content-addressed blob + create a `file_versions` row ([12](12-version-history.md)). Triggers: **≥ 200 updates since the last snapshot**, **a 5-minute time threshold**, or the **last participant leaving** the room. Run in `SnapshotService`; any participant may snapshot; the server may then prune updates older than the snapshot's `seq`, retaining the safety tail it defines (last 7 days OR the most recent 1000 updates, whichever is larger — [server 05 §5.6](https://github.com/Nyxite/server)).
 
 > **Reference snapshotter.** Because the desktop holds the full corpus and ample CPU, it snapshots reliably and is the natural fallback when only mobile/web peers (more resource-constrained) are present. Where a desktop is in the room it should generally take the snapshot, reducing load on lighter clients — a soft preference, not a protocol requirement (any participant may snapshot, so correctness never depends on a desktop being present).
 

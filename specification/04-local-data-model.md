@@ -33,7 +33,7 @@ IDs are server-issued **UUIDv7** values (stored as `TEXT`/`BLOB`); created-on-de
 | `Id` | TEXT PK | UUIDv7 |
 | `ProjectId`,`FolderId?`,`OwnerId` | TEXT | folder null = project root |
 | `Name` | TEXT | decrypted file name |
-| `ContentType` | TEXT | enum: `markdown`,`plaintext`,`ink`,`sourcecode`,`office`,`image` ([08](08-sync-engine.md)) — immutable |
+| `ContentType` | TEXT | enum: `markdown`,`plaintext`,`ink`,`sourcecode`,`office`,`image`,`binary` ([08](08-sync-engine.md)) — immutable |
 | `SyncPolicy` | TEXT | server-side policy enum: `server-default`,`excluded` only ([08 §8.2](08-sync-engine.md)). The server never sees `KeepOnDevice`. |
 | `KeepOnDevice` | TEXT? | **client-local, per-device** offline-pinning setting: `keep`/`dontKeep`/null=`inherit` from folder/project ([16 §16.2](16-offline-and-storage-policies.md)); never sent to the server. On desktop the **account default is effectively "keep" (full-corpus)** unless the user opts a subtree out ([16 §16.2](16-offline-and-storage-policies.md)). |
 | `CurrentVersionSeq` | INTEGER? | head pointer |
