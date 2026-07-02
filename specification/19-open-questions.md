@@ -16,7 +16,7 @@ These were decided during specification and are treated as fixed unless a spike 
 
 ## 19.1 ydotnet binding maturity *(maps to the master "CRDT bindings" validation item)*
 
-- **Question**: Is ydotnet mature/complete enough to run the full client-side merge and snapshotting, and does it interop byte-for-byte with Yjs (web) and ykt (Android)?
+- **Question**: Is ydotnet mature/complete enough to run the full client-side merge and snapshotting, and does it interop byte-for-byte with Yjs (web) and yrs/UniFFI (Android)?
 - **Why it matters**: it is the highest-risk client dependency; the desktop is also the reference snapshotter ([09 §9.6](09-realtime-collaboration.md)).
 - **Recommended resolution**: adopt ydotnet via the shared `Nyxite.Crdt` glue; **gate adoption on the Phase-1 spike** passing the shared conformance vectors. **Fallback**: a thin own binding over `yffi` (P/Invoke or a small Rust shim) if ydotnet is inadequate.
 - **Spike** ([18 §18.8](18-build-ci-testing.md)): replay shared Yrs wire vectors; soak-test a live three-client (desktop/web/android) session; benchmark snapshot/merge on large docs.

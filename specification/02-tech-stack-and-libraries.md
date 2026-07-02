@@ -90,7 +90,7 @@ All primitives are the server's canonical implementations, consumed via **`Nyxit
 
 | Concern | Choice | Risk |
 |---------|--------|------|
-| Text CRDT | **`Nyxite.Crdt`** over **ydotnet** (Yrs .NET binding) | ydotnet is a **community-maintained** binding now running the full client-side merge and snapshotting. The shared `Nyxite.Crdt` glue also backs the server's `Nyxite.CrdtConformanceTests` harness, so interop with Yjs (web) / ykt (Android) is validated by shared vectors. **Spike ydotnet maturity early** ([09 §9.10](09-realtime-collaboration.md), [19](19-open-questions.md)); fallback is a thin own binding over `yffi`. |
+| Text CRDT | **`Nyxite.Crdt`** over **ydotnet** (Yrs .NET binding) | ydotnet is a **community-maintained** binding now running the full client-side merge and snapshotting. The shared `Nyxite.Crdt` glue also backs the server's `Nyxite.CrdtConformanceTests` harness, so interop with Yjs (web) / yrs/UniFFI (Android) is validated by shared vectors. **Spike ydotnet maturity early** ([09 §9.10](09-realtime-collaboration.md), [19](19-open-questions.md)); fallback is a thin own binding over `yffi`. |
 
 ## 2.9 Observability & quality
 

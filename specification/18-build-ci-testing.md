@@ -31,7 +31,7 @@
 | Layer | Tools | Focus |
 |-------|-------|-------|
 | **Crypto conformance** | xUnit + shared KAT/cross-client vectors | **AES-GCM framing, HPKE wrap/unwrap, Ed25519, X25519, BLAKE3, Argon2id** must interop byte-for-byte with server/android/web. Since desktop *is* `Nyxite.Crypto`, these vectors are the canonical guard that the shared lib stays interoperable. **Highest priority.** ([06 §6.9](06-cryptography.md)) |
-| **CRDT conformance** | xUnit + shared Yrs wire vectors | ydotnet (via `Nyxite.Crdt`) must produce identical merged state and encoded updates vs Yjs/ykt — the same vectors the server `Nyxite.CrdtConformanceTests` uses. **Validate ydotnet before committing.** ([09 §9.10](09-realtime-collaboration.md)) |
+| **CRDT conformance** | xUnit + shared Yrs wire vectors | ydotnet (via `Nyxite.Crdt`) must produce identical merged state and encoded updates vs Yjs/android yrs/UniFFI — the same vectors the server `Nyxite.CrdtConformanceTests` uses. **Validate ydotnet before committing.** ([09 §9.10](09-realtime-collaboration.md)) |
 | Domain | xUnit, FluentAssertions, NSubstitute | Use cases, policy logic, conflict/sync state machine — pure runtime. |
 | Data | EF Core SQLite (file + in-memory), `WireMock.Net` | DbContext/migrations (asserted, against a SQLCipher-keyed connection), API mapping, error mapping, outbox/idempotency, delta/manifest reconcile. |
 | ViewModels | xUnit + `Microsoft.Reactive.Testing` (Rx) | MVVM/Reactive state and commands. |
