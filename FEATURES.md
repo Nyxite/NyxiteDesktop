@@ -38,6 +38,13 @@ Avalonia (C#) client for Windows and Linux. Shares domain models, DTOs, encrypti
 
 - Create and manage share links (link key in the URL fragment; account shares wrap the file key to the recipient's public key via HPKE)
 
+## Group sharing (enterprise/family)
+
+- Group management ([features/groups.md](groups.md)): generate a group keypair, enroll/remove members, and unwrap the group key → unwrap DEKs, all client-side; enrollment **verifies the member's public key against the key-transparency log** before wrapping
+- Wrap a file/subtree DEK to a group public key; honor the per-project/folder **reader-group attachment** — auto-wrap new files to the attached group's public key (the enterprise "manager reads all" path) via the shared C# crypto code
+- `GroupKeyRotationService` — scope-scoped group-key rotation on member removal (re-wrap to remaining, optional DEK re-seal); honest UI that already-decrypted content can't be recalled
+- Recovering the identity key restores group access automatically (group grants unwrap under the recovered personal key)
+
 ## Encryption & keys
 
 - Local AES-256-GCM content encryption and HPKE wrap/unwrap, via the shared C# crypto code

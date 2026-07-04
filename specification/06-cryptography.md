@@ -84,3 +84,29 @@ byte[] Open(ReadOnlySpan<byte> frame, FileKeyHandle fk, ObjectKind kind, Guid fi
 - **Constant-time** comparisons for tags/tokens (use `CryptographicOperations.FixedTimeEquals`).
 - **Zeroize** key material buffers after use (`CryptographicOperations.ZeroMemory`); hold unwrapped keys only in the `UserSession`.
 - **Known-answer tests** for AES-GCM framing, HPKE wrap/unwrap, Ed25519, X25519, BLAKE3, and Argon2id, plus **cross-client conformance vectors** shared with server/android/web ([18 §18.5](18-build-ci-testing.md)). Because the desktop *is* the server's crypto code, these tests double as the canonical guard that a `Nyxite.Crypto` change stays interoperable.
+
+## 6.10 Group-key wrapping (enterprise/family sharing)
+
+Group sharing inserts **one optional middle layer** into the wrap hierarchy so a file readable by a whole group is wrapped once instead of per member ([13 §13.7](13-sharing.md), [07 §7.10](07-key-and-device-management.md); feature [groups.md](https://github.com/Nyxite/Nyxite), build step **P4.4-DSK-1/2**):
+
+```
+personal key  →  wraps  →  group key  →  wraps  →  DEK (FK)  →  encrypts  →  file
+```
+
+This adds **no new primitive** — a group public key is just another HPKE target, exactly like a member or device public key. Everything below is the same `Nyxite.Crypto` code and the same pinned suite as §6.2/§6.4; the framing (§6.3) and the content/DEK layer (§6.5) are unchanged.
+
+- **Group keypair.** A group is an **X25519 (HPKE) + Ed25519 (sign)** keypair generated client-side by the creator via `RandomNumberGenerator` / `Nyxite.Crypto` — the *same* keygen as an identity keypair (§6.7). Its **public** half is published as a directory HPKE target anyone may wrap to; its **private** half is never sent unwrapped — it lives on the server only as per-member wrapped blobs.
+- **Wrap the group private key to a member (the group-key grant).** `HPKE-seal(memberX25519Pubkey, groupPrivBundle)` where `groupPrivBundle = X25519 priv ‖ Ed25519 priv` — the DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM suite (§6.2). The resulting **grant blob** carries `group_id | scope_id | member_id | generation | alg_id | hpke_ct` and is **append-only** (rotation bumps `generation` and appends, §7.10). No grant ever contains a plaintext key.
+- **Wrap a DEK to a group (DEK-to-group).** `HPKE-seal(groupX25519Pubkey, FK)` produces a wrapped-key row whose **principal is a group** (per scope/generation), stored alongside the existing per-member `wrapped_key` rows (§6.5). A worker can wrap to the managers-group public key with **no membership in it** — only the directory public key is needed (the enterprise "manager reads all" path, [13 §13.7](13-sharing.md)).
+- **Unwrap chain (read path).** `HPKE-open` the group-key grant with the **identity private key** → recover the group private key → `HPKE-open` the DEK-to-group wrap with the group private key → recover the `FileKeyHandle` → `Open` the frame (§6.3). Both unwraps run entirely on-device; the server holds only opaque blobs.
+- **`alg_id`-tagged wrap format.** Every group-wrapped blob (grant **and** DEK-to-group) carries an explicit **`alg_id`** naming the wrap algorithm, for crypto-agility. Because a group key wraps *many* DEKs it concentrates any future post-quantum blast radius, so the format is algorithm-agile from day one even though v1 ships the classical pinned suite — the same `ICryptoEngine`-behind-an-interface agility rule as §6.9.
+
+`ICryptoEngine` gains group overloads, still delegating to the shared package:
+```csharp
+GroupKeyPair GenerateGroupKeyPair();                                             // X25519 + Ed25519, via Nyxite.Crypto
+byte[] WrapGroupKeyToMember(GroupKeyPair group, ReadOnlySpan<byte> memberPubkey); // → group-key grant (alg_id-tagged)
+GroupKeyHandle UnwrapGroupKey(ReadOnlySpan<byte> grant, IdentityKeyHandle identity);
+byte[] WrapDekToGroup(FileKeyHandle fk, ReadOnlySpan<byte> groupPubkey);          // → DEK-to-group wrap (alg_id-tagged)
+FileKeyHandle UnwrapDekViaGroup(ReadOnlySpan<byte> dekToGroup, GroupKeyHandle group);
+```
+Group private keys and unwrapped `GroupKeyHandle`s follow the same zeroize-after-use / in-session-only rules as identity keys and FKs (§6.9, [07 §7.2](07-key-and-device-management.md)); the group wrap/unwrap pairs join the **cross-client conformance vectors** (§18.5) so a desktop-wrapped grant/DEK opens on server/android/web and vice-versa.

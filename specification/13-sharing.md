@@ -41,3 +41,27 @@ The server stores only the opaque wrapped blob; it never sees the FK.
 - Directory trust is **TLS + Ed25519 self-signature** on entries; **key transparency / safety-number verification is deferred to Phase 6**. Until then, surface the grantee's key fingerprint so cautious users can compare out-of-band.
 - The client respects server rate limits on `GET /keys/directory`, `POST /shares`, and `/share/{token}` access (`429` backoff, [05](05-api-client.md)).
 - Fragment keys (≥256-bit) and link tokens (≥128-bit) are generated with a CSPRNG; the app warns that links in chat/history can leak the fragment, so prefer account shares for sensitive material and use short expiries for links.
+
+## 13.7 Group sharing (enterprise/family)
+
+Beyond one-off account and link shares, files can be shared with a **group** via the group-key layer ([06 §6.10](06-cryptography.md), [07 §7.10](07-key-and-device-management.md); feature [groups.md](https://github.com/Nyxite/Nyxite), build steps **P4.4-DSK-1/2**). It serves two archetypes — **family** (every member holds a distinct personal key but all read the same shared data) and **enterprise** (a **managers** group reads all of a team's files; a worker reads only their own) — and **coexists** with per-file account/link shares (groups for team/family scale; account shares for one-off single-person shares). Keys are **flat** (no nesting) and **scoped per project/time-period**.
+
+### Group-management UI
+- A **Groups** panel (in `Feature.Sharing`, [15](15-ui-and-navigation.md)) lets a user **create a group** (generate the group keypair, publish its public half — [07 §7.10](07-key-and-device-management.md)), list its members and scopes, **enroll** a member, and **remove** a member. It surfaces the group's public-key fingerprint and each member's transparency-verified status.
+- **Enroll** shows the newcomer's identity-key fingerprint and its **key-transparency inclusion-proof result (Phase 4.3)**; enrollment is blocked with a clear error if the proof fails (a directory-substituted key), since one bad key would expose the whole group's corpus ([07 §7.10](07-key-and-device-management.md)). A successful enroll is **one grant blob** — the UI states it instantly grants every file the group can read (no per-file wait), unlike a subtree account share (§13.1, batched per file).
+- The panel reflects the **server-enforced group-size limit** (and the admin per-group override): an over-limit enroll is rejected server-side and surfaced.
+
+### Wrapping a file / subtree to a group
+- **Grant one file to a group**: `WrapDekToGroup` seals the file's DEK to the group public key ([06 §6.10](06-cryptography.md)) and stores one DEK-to-group blob via the wrapped-key API; the group ACL is set alongside (the two-layer model, as §13.1).
+- **Grant a subtree**: for a folder/project target, wrap each in-scope file's DEK to the group (batched/lazily). The full-corpus desktop already holds every FK in the subtree, so it drives this **bulk wrap** efficiently — but note enrollment itself never needs this: adding a *member* is O(1) (one group-key grant), and only *first-time* group grants on files cost a per-file wrap.
+
+### Reader-group attachment & auto-wrap on create
+- A **project or folder** may carry a **reader-group attachment** naming a group whose **public key new files are auto-wrapped to** on creation, in addition to the author's own key — this drives the enterprise "manager reads all" path. It rides the **existing per-project/folder/file cascade** — `inherit` / a specific group / none — the same inheritance as sync policy and plaintext-at-rest ([16 §16.8](16-offline-and-storage-policies.md)).
+- **On file create** (extends the create path of [07 §7.5](07-key-and-device-management.md)): the client resolves the effective attachment for the file's scope and, if a group is attached, wraps the new FK to **the author's public key AND the attached group's public key** (`WrapDekToGroup` against the directory public key — no membership in that group required). A worker's file is thus readable by the worker and by the managers group; another worker has **no key path** (cryptographically locked out). Client-enforced; the server stores only the opaque attachment as structure metadata.
+
+### Revocation (honest UI)
+Removing a group member reuses the two-layer model of §13.5 at the group-key level, driven by `GroupKeyRotationService` ([07 §7.10](07-key-and-device-management.md)):
+1. **Instant ACL cutoff / soft** — delete the member's group-key grant (`DELETE /groups/{id}/members/{uid}`); they can no longer fetch new group blobs.
+2. **Forward-secrecy rotation** — a remaining member rotates the **affected scope's** group key (new generation, re-wrap to remaining, optional DEK re-seal); the group/scope shows `Rotating`. Only that scope is touched.
+- The UI is **honest, exactly as §13.5**: already-decrypted content **can't be recalled**; rotation protects only content produced after it. This caveat is surfaced in the removal dialog.
+- **Recovery composes for free**: a member who recovers their identity key regains group access automatically (grants unwrap under the recovered personal key); a member who lost everything is **re-enrolled** by a group admin (one new grant) — [07 §7.10](07-key-and-device-management.md).

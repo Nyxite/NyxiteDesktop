@@ -87,3 +87,32 @@ The server simultaneously drops the removed member's ACL grant (instant cutoff) 
 Decisions (mirroring the master tracker and [19 §19.2](19-open-questions.md)): **OS keystore for the wrapping secret** (DPAPI / Secret Service), with a passphrase-derived fallback where no Secret Service exists; **app-lock with a 10-minute idle window** (configurable 1–60 min, or every-launch); **Argon2id m = 64 MiB, t = 3, p = 1**; **BIP39 24-word** recovery phrase with scrubbed re-entry; **device-to-device approval via QR (primary) + numeric code (fallback)** showing the new device's label + fingerprint.
 
 Remaining validation (spike, [19 §19.2](19-open-questions.md)): Secret Service availability across target Linux desktops and the headless fallback UX; DPAPI behavior across Windows roaming-profile setups; whether Windows Hello / `libfido2` can strengthen the at-rest wrap beyond plain OS-login unseal.
+
+## 7.10 Group keys (enterprise/family sharing)
+
+Group sharing ([13 §13.7](13-sharing.md), [groups.md](https://github.com/Nyxite/Nyxite)) adds a **group keypair** whose private half is wrapped once per member — a third managed key alongside identity keys and FKs. The crypto is [06 §6.10](06-cryptography.md); this section covers the client key-management lifecycle (build steps **P4.4-DSK-1/2**). Group keys depend on **key transparency (Phase 4.3)** and reuse the Phase-2.3 rotation machinery ([§7.6](#76-key-rotation--revocation-client-driven-forward-secrecy)) at the group-key level.
+
+### Group key generation
+- The creator generates a group **X25519 + Ed25519** keypair (`GenerateGroupKeyPair`, [06 §6.10](06-cryptography.md)), **publishes the public half** to the directory (`POST /groups { group_pubkey, ed25519_pubkey, scope_kind, max_members? }`), and holds the private half only in-session, OS-keystore-wrapped like the identity store ([§7.2](#72-on-device-key-storage)). Keys are **scoped per project/time-period** (`scope_kind`); a file wraps to the group key **of its scope**.
+
+### Member enrollment (transparency-verified)
+Adding a member is **O(1)** — one grant blob, no file touched:
+1. The enrolling client (which already holds the group key) fetches the newcomer's identity public key from the directory and **verifies it against the key-transparency log (Phase 4.3)** — an inclusion proof, stronger than the TLS + Ed25519-self-signature model used for one-off account shares ([13 §13.6](13-sharing.md)). Because one substituted key would expose the whole group's corpus (not a single file), **enrollment refuses to wrap to an unverified key**.
+2. On success, `WrapGroupKeyToMember` HPKE-seals the group private key under the verified public key ([06 §6.10](06-cryptography.md)) and writes **one** append-only **group-key grant** via `POST /groups/{id}/members` — `group_id | scope_id | member_id | generation | alg_id | hpke_ct`. No file DEK is re-wrapped; the grant instantly opens every file the group can read.
+3. Enrollment is **server-gated** by the group-size limit (membership-row count only) and audited; an over-limit add is rejected server-side ([13 §13.7](13-sharing.md)).
+
+### Grant handling (read path)
+- To open a group-readable file, `GET /groups/{id}/keys` → the caller's grant; `UnwrapGroupKey` with the identity private key → `GroupKeyHandle`; then `UnwrapDekViaGroup` on the file's DEK-to-group wrap → `FileKeyHandle` ([06 §6.10](06-cryptography.md)). The wrapped grant is cached locally (`DirectoryKeyEntity`-style); the unwrapped `GroupKeyHandle` lives only in the `UserSession` and is zeroized on lock/logout ([§7.2](#72-on-device-key-storage)).
+- Grants are **append-only** and generation-tagged, giving an auditable "who could read what when" history; the client always unwraps with the **current** generation for its scope.
+
+### `GroupKeyRotationService` (removal / forward secrecy)
+Removal is two-layer, mirroring [§7.6](#76-key-rotation--revocation-client-driven-forward-secrecy) but at the group-key level and **scoped**:
+1. **Soft** — `DELETE /groups/{id}/members/{uid}` deletes the departing member's grant (instant ACL cutoff). One delete.
+2. **Rotate (forward secrecy)** — a remaining member's `GroupKeyRotationService` generates a **new group key for the affected scope**, re-wraps it to each **remaining** member (`generation + 1`), and commits `POST /groups/{id}/keys/rotate { scopeId, generation, wrappedGroupKeys[] }`. New files use the new generation; the removed member reads nothing new.
+3. **Full (seal history)** — additionally **re-seals the affected scope's DEKs** under the new group key (re-wraps the small DEK-to-group blobs only, never file ciphertext).
+- **Concurrency**, identical to `KeyRotationService` ([§7.6](#76-key-rotation--revocation-client-driven-forward-secrecy)): a concurrent rotation loser gets **`409`** (abandon, refetch the new generation); an in-flight **old-key** wrap after commit gets **`412 key_generation_stale`**, then re-seals under the current key. Only the **affected scope** is touched — other scopes are untouched, bounding the manager-revocation blast radius.
+- The service runs in the background; the group/scope shows a `Rotating` state. As the full-corpus reference snapshotter, the desktop is frequently the member that drives group rotation. **Honest caveat (unchanged):** nothing retracts what a keyholder already decrypted; rotation only guarantees they read nothing new ([13 §13.7](13-sharing.md)).
+
+### Recovery restores group access (for free)
+- Because each group private key is wrapped **under the member's identity public key**, recovering the identity key (recovery phrase, [§7.4](#74-recovery-key)) automatically restores group access — the group grants simply unwrap under the recovered personal key on the fresh device, **no special path**.
+- A member who loses **all devices and the recovery phrase** cannot self-recover (the no-escrow model, [§7.4](#74-recovery-key)); they are **re-enrolled by a group admin** — the admin issues **one new grant** to the member's new identity public key (transparency-verified as in *Member enrollment*). This is the only group-specific recovery seam.
