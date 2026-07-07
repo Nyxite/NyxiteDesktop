@@ -67,7 +67,7 @@ Indexes: `ProjectId`, `FolderId`, `OwnerId`, `SyncState`, `KeepOnDevice`, `(Keep
 `Id` PK, `Label`, `Pubkey` BLOB, `EnrolledAt`, `RevokedAt?`, `IsThisDevice` BOOL.
 
 ### DirectoryKeyEntity (cached public keys of other users)
-`UserId` (or `Email`), `KeyId`, `X25519` BLOB, `Ed25519` BLOB, `Generation`, `FetchedAt`. Used to wrap shares; refresh-on-use ([13](13-sharing.md)).
+`UserId` (or `Email`), `KeyId`, `HpkePubkey` BLOB (hybrid X25519 + ML-KEM-768), `SignPubkey` BLOB (hybrid Ed25519 + ML-DSA-65), `Generation`, `FetchedAt`. Used to wrap shares; refresh-on-use ([13](13-sharing.md)). Suite pinned by `alg_id` ([06 §6.2](06-cryptography.md)).
 
 ### Outbox / pending operations
 `PendingOpEntity`: `Id`, `Kind` (`structure`,`blobUpload`,`crdtSubmit`,`delete`,`keyRotate`,`shareCreate`,`shareRevoke`), `TargetId`, `PayloadRef`, `IdempotencyKey`, `Attempts`, `NextAttemptAt`, `LastError?`. Drives reliable, retryable, idempotent sync ([05 §5.5](05-api-client.md), [08](08-sync-engine.md)).

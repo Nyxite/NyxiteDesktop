@@ -7,7 +7,7 @@ Covers the identity keypair, device enrollment, the recovery key, FK rotation, a
 ```
 OS keystore secret (DPAPI on Windows / Secret Service on Linux)
    └─ wraps → DB master key (SQLCipher) and the Identity Key Store
-                 └─ holds → Identity private keys: X25519 (HPKE) + Ed25519 (sign)
+                 └─ holds → Identity private keys: X25519+ML-KEM-768 (hybrid HPKE) + Ed25519+ML-DSA-65 (hybrid sign)
                               └─ unwraps → File Keys (FK, per file)
 Recovery key (user-held phrase) ──Argon2id──► wrapping key ──► escrow of identity private key (server-opaque)
 Device key (per device) ──► used to approve/enroll new devices
@@ -24,7 +24,7 @@ The `IKeyStoreVault` abstraction has two implementations behind a common interfa
 
 The OS-keystore secret wraps:
 - the **DB master key** (SQLCipher `PRAGMA key`),
-- the **Identity Key Store** blob (the X25519+Ed25519 private keys, themselves serialized and AES-GCM-encrypted).
+- the **Identity Key Store** blob (the hybrid X25519 + ML-KEM-768 and Ed25519 + ML-DSA-65 private keys, themselves serialized and AES-GCM-encrypted).
 
 The unlocked identity private keys live only in the in-memory `UserSession` ([01 §1.8](01-architecture.md)); on lock/logout/account-switch the session is disposed and buffers zeroized (`CryptographicOperations.ZeroMemory`).
 
@@ -34,7 +34,7 @@ The unlocked identity private keys live only in the in-memory `UserSession` ([01
 
 ### First device / first sign-in
 1. User authenticates (native password + TOTP or passkey by default; enterprise Keycloak SSO optional) → the server's access token ([14](14-authentication.md)).
-2. App checks the key directory (`GET /keys/directory?userId=me`): if the user has **no identity keypair yet** (brand-new account), generate X25519 + Ed25519, store privates in the OS-keystore-wrapped identity store, and **publish publics** via `PUT /keys`.
+2. App checks the key directory (`GET /keys/directory?userId=me`): if the user has **no identity keypair yet** (brand-new account), generate the hybrid identity keypair (X25519 + ML-KEM-768 for HPKE, Ed25519 + ML-DSA-65 for signing — [06 §6.2](06-cryptography.md)), store privates in the OS-keystore-wrapped identity store, and **publish publics** via `PUT /keys`.
 3. Generate a **device keypair**; register the device via `POST /devices { label, pubkey }` → `{ deviceId, status: "pending", pairingCode, qrPayload }`.
 4. Generate the **recovery key** and escrow ([§7.4](#74-recovery-key)). Force the user through the recovery-key flow before completing setup.
 
@@ -49,7 +49,7 @@ Until enrolled with the identity private key, the device can authenticate and se
 ## 7.4 Recovery key
 
 - Generated as a **BIP39 24-word phrase** (256-bit, checksummed, vetted word list) **shown once**. The app must make the user record it (copy, write down, confirm by re-entry) and warn unmistakably: **losing all devices and this phrase = permanent, unrecoverable data loss** (no server/admin escrow exists).
-- The app derives a wrapping key via **Argon2id** (m = 64 MiB, t = 3, p = 1, tunable — [06 §6.8](06-cryptography.md)) and **seals the identity bundle (X25519 priv ‖ Ed25519 priv) with AES-256-GCM** under that derived key (DECISION: AES-GCM, **not** HPKE — symmetric key, [06 §6.4](06-cryptography.md)). The recovery-blob shape is `{ version, kdf:{alg:"argon2id", m, t, p, salt(16)}, nonce(12), ciphertext, tag(16) }` with **AAD = `userId ‖ version`**. It uploads the **opaque** escrow + non-secret `kdf_params` via `PUT /recovery`. The server stores it but cannot open it.
+- The app derives a wrapping key via **Argon2id** (m = 64 MiB, t = 3, p = 1, tunable — [06 §6.8](06-cryptography.md)) and **seals the identity bundle (the hybrid X25519 + ML-KEM-768 and Ed25519 + ML-DSA-65 privates) with AES-256-GCM** under that derived key (DECISION: AES-GCM, **not** HPKE — symmetric key, quantum-safe and unchanged; it just wraps a larger hybrid bundle, [06 §6.4](06-cryptography.md)). The recovery-blob shape is `{ version, kdf:{alg:"argon2id", m, t, p, salt(16)}, nonce(12), ciphertext, tag(16) }` with **AAD = `userId ‖ version`**. It uploads the **opaque** escrow + non-secret `kdf_params` via `PUT /recovery`. The server stores it but cannot open it.
 - Re-issuing a recovery key (rotation) re-wraps the escrow under a new phrase and re-uploads; the old phrase is invalidated client-side by overwrite.
 - The recovery key is **never** stored on the device in plaintext; if the user opts to keep a copy, it is their responsibility outside the app.
 
@@ -93,11 +93,11 @@ Remaining validation (spike, [19 §19.2](19-open-questions.md)): Secret Service 
 Group sharing ([13 §13.7](13-sharing.md), [groups.md](https://github.com/Nyxite/Nyxite)) adds a **group keypair** whose private half is wrapped once per member — a third managed key alongside identity keys and FKs. The crypto is [06 §6.10](06-cryptography.md); this section covers the client key-management lifecycle (build steps **P4.4-DSK-1/2**). Group keys depend on **key transparency (Phase 4.3)** and reuse the Phase-2.3 rotation machinery ([§7.6](#76-key-rotation--revocation-client-driven-forward-secrecy)) at the group-key level.
 
 ### Group key generation
-- The creator generates a group **X25519 + Ed25519** keypair (`GenerateGroupKeyPair`, [06 §6.10](06-cryptography.md)), **publishes the public half** to the directory (`POST /groups { group_pubkey, ed25519_pubkey, scope_kind, max_members? }`), and holds the private half only in-session, OS-keystore-wrapped like the identity store ([§7.2](#72-on-device-key-storage)). Keys are **scoped per project/time-period** (`scope_kind`); a file wraps to the group key **of its scope**.
+- The creator generates a group **hybrid X25519 + ML-KEM-768 (HPKE) + Ed25519 + ML-DSA-65 (sign)** keypair (`GenerateGroupKeyPair`, [06 §6.10](06-cryptography.md)), **publishes the public half** to the directory (`POST /groups { group_pubkey, ed25519_pubkey, scope_kind, max_members? }` — both public halves are the hybrid pairs), and holds the private half only in-session, OS-keystore-wrapped like the identity store ([§7.2](#72-on-device-key-storage)). Keys are **scoped per project/time-period** (`scope_kind`); a file wraps to the group key **of its scope**.
 
 ### Member enrollment (transparency-verified)
 Adding a member is **O(1)** — one grant blob, no file touched:
-1. The enrolling client (which already holds the group key) fetches the newcomer's identity public key from the directory and **verifies it against the key-transparency log (Phase 4.3)** — an inclusion proof, stronger than the TLS + Ed25519-self-signature model used for one-off account shares ([13 §13.6](13-sharing.md)). Because one substituted key would expose the whole group's corpus (not a single file), **enrollment refuses to wrap to an unverified key**.
+1. The enrolling client (which already holds the group key) fetches the newcomer's identity public key from the directory and **verifies it against the key-transparency log (Phase 4.3)** — an inclusion proof, stronger than the TLS + hybrid Ed25519 + ML-DSA-65 self-signature model used for one-off account shares ([13 §13.6](13-sharing.md)). Because one substituted key would expose the whole group's corpus (not a single file), **enrollment refuses to wrap to an unverified key**.
 2. On success, `WrapGroupKeyToMember` HPKE-seals the group private key under the verified public key ([06 §6.10](06-cryptography.md)) and writes **one** append-only **group-key grant** via `POST /groups/{id}/members` — `group_id | scope_id | member_id | generation | alg_id | hpke_ct`. No file DEK is re-wrapped; the grant instantly opens every file the group can read.
 3. Enrollment is **server-gated** by the group-size limit (membership-row count only) and audited; an over-limit add is rejected server-side ([13 §13.7](13-sharing.md)).
 

@@ -18,7 +18,7 @@ Unlike the Android (Kotlin) and Web (TypeScript) clients, which **reimplement** 
 
 - **`Nyxite.Domain`** — domain entities, enums, value types.
 - **`Nyxite.Contracts`** — REST/relay DTOs and the `problem+json` error contract.
-- **`Nyxite.Crypto`** — the canonical AES-256-GCM framing, HPKE wrap/unwrap, Ed25519/X25519, BLAKE3 addressing, Argon2id recovery KDF.
+- **`Nyxite.Crypto`** — the canonical AES-256-GCM framing, hybrid post-quantum HPKE wrap/unwrap (X25519 + ML-KEM-768), hybrid signatures (Ed25519 + ML-DSA-65), BLAKE3 addressing, Argon2id recovery KDF.
 - **`Nyxite.Crdt`** — the ydotnet/Yrs glue, snapshot/state-vector helpers, and the wire-protocol surface that also backs the server-side `Nyxite.CrdtConformanceTests` harness (a test harness, **not** live server-side merging).
 
 The desktop therefore gets byte-for-byte crypto and CRDT compatibility **by construction**, not by re-derivation. It still runs the same cross-client conformance vectors in CI ([18](18-build-ci-testing.md)) so that a protocol change can never silently diverge from web/Android.
@@ -39,7 +39,7 @@ The desktop therefore gets byte-for-byte crypto and CRDT compatibility **by cons
 | 03 | [project-structure.md](03-project-structure.md) | Solution/project graph, namespaces, naming |
 | 04 | [local-data-model.md](04-local-data-model.md) | EF Core + SQLite/SQLCipher schema, encrypted-at-rest DB, sync state, FTS |
 | 05 | [api-client.md](05-api-client.md) | REST client, DTO mapping, error/retry, idempotency, TLS |
-| 06 | [cryptography.md](06-cryptography.md) | AEAD, HPKE, Ed25519/X25519, BLAKE3, Argon2id, framing, shared `Nyxite.Crypto` |
+| 06 | [cryptography.md](06-cryptography.md) | AEAD, hybrid PQ HPKE (X25519+ML-KEM-768), hybrid signatures (Ed25519+ML-DSA-65), BLAKE3, Argon2id, framing, shared `Nyxite.Crypto` |
 | 07 | [key-and-device-management.md](07-key-and-device-management.md) | Identity keypair, device enrollment, recovery key, OS keystore (DPAPI/Secret Service) |
 | 08 | [sync-engine.md](08-sync-engine.md) | Manifest/delta sync, policies, CRDT/LWW split, hosted background services |
 | 09 | [realtime-collaboration.md](09-realtime-collaboration.md) | SignalR relay, ydotnet/Yrs merge, awareness, guests, snapshots |

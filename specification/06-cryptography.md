@@ -12,15 +12,17 @@ These are the server's canonical primitives, reproduced for reference. Because t
 
 | Purpose | Algorithm | .NET provider (in `Nyxite.Crypto`) |
 |---------|-----------|-------------------------------------|
-| Content / CRDT / snapshot encryption | **AES-256-GCM** (96-bit nonce, 128-bit tag) | `System.Security.Cryptography.AesGcm` (BCL) |
-| Public-key wrap (file-key to a member, device enrollment to a device pubkey) | **HPKE**: DHKEM(X25519, HKDF-SHA256) / HKDF-SHA256 / AES-256-GCM — RFC 9180 IDs `KEM=0x0020`, `KDF=0x0001`, `AEAD=0x0002` | the shared HPKE impl (BouncyCastle / vetted RFC 9180) |
-| Symmetric wrap (recovery blob) | **AES-256-GCM** under an Argon2id-derived key | `AesGcm` ([§6.4](#64-hpke-wrapping)) |
-| Identity key agreement | **X25519** | shared lib (BouncyCastle/NSec) |
-| Signing (updates, key-directory entries) | **Ed25519** | shared lib (BouncyCastle/NSec) |
-| Recovery-key derivation | **Argon2id → wrapping key** (m = 64 MiB, t = 3, p = 1; tunable, stored in `recovery_blobs.kdf_params`) | `Konscious.Security.Cryptography.Argon2` / libsodium |
-| Plaintext hashing (content address) | **BLAKE3-256** | `Blake3` (official Rust binding) |
+| Content / CRDT / snapshot encryption | **AES-256-GCM** (96-bit nonce, 128-bit tag) — quantum-safe, unchanged | `System.Security.Cryptography.AesGcm` (BCL) |
+| Public-key wrap (file-key to a member, device enrollment to a device pubkey) | **Hybrid HPKE**: DHKEM(**X25519 + ML-KEM-768**) / HKDF-SHA256 / AES-256-GCM — hybrid suite id **`X25519MLKEM768`** (KDF `0x0001`, AEAD `0x0002`; **NIST level 3**, classical X25519 secret ‖ ML-KEM-768 KEM secret) | a **hybrid-capable HPKE** impl in the shared lib — see the library note in [02 §2.7](02-tech-stack-and-libraries.md) |
+| Symmetric wrap (recovery blob) | **AES-256-GCM** under an Argon2id-derived key — quantum-safe, unchanged | `AesGcm` ([§6.4](#64-hpke-wrapping)) |
+| Identity key agreement | **X25519 + ML-KEM-768** (hybrid) | hybrid-capable lib ([02 §2.7](02-tech-stack-and-libraries.md)) |
+| Signing (updates, key-directory entries) | **Ed25519 + ML-DSA-65** (hybrid dual signature; **NIST level 3**) | hybrid-capable lib ([02 §2.7](02-tech-stack-and-libraries.md)) |
+| Recovery-key derivation | **Argon2id → wrapping key** (m = 64 MiB, t = 3, p = 1; tunable, stored in `recovery_blobs.kdf_params`) — quantum-safe, unchanged | `Konscious.Security.Cryptography.Argon2` / libsodium |
+| Plaintext hashing (content address) | **BLAKE3-256** — quantum-safe, unchanged | `Blake3` (official Rust binding) |
 
 These values are **pinned to the server's canonical ledger** and are identical across clients; because the desktop and server share the implementation, drift would require changing `Nyxite.Crypto` itself, which **breaks the shared conformance vectors and fails CI on all clients** ([18 §18.5](18-build-ci-testing.md)).
+
+**Post-quantum hybrid at v1.0.0** ([OPEN-DECISIONS PQ-1–PQ-4](https://github.com/Nyxite/Nyxite), ratified 2026-07-07). Every **asymmetric** seam ships **hybrid classical + PQC** from v1.0.0: HPKE key wrap / key agreement is **X25519 + ML-KEM-768** and every signature is **Ed25519 + ML-DSA-65**, both at **NIST level 3**. Hybrid = the classical and PQC halves are concatenated, so the construction is safe unless **both** break — this closes the harvest-now-decrypt-later exposure on the zero-knowledge server's indefinitely-stored X25519-wrapped file keys. The **symmetric** primitives above (AES-256-GCM, Argon2id, BLAKE3-256) are **untouched** — already quantum-safe, only Grover-halved at their current sizes; **PQC does not touch password hashing**. Each hybrid suite is pinned by the existing **`alg_id`** agility tag (§6.10, [OPEN-DECISIONS PQ-4](https://github.com/Nyxite/Nyxite)), so a future primitive change re-wraps only the **small** keys, never the content ciphertext.
 
 **System rule — HPKE vs AES-256-GCM**: use **HPKE wherever the target is a public key** (file-key wrap to members, device enrollment to a device pubkey); use **AES-256-GCM wherever the key is symmetric** (all content + the recovery blob).
 
@@ -49,9 +51,9 @@ byte[] Open(ReadOnlySpan<byte> frame, FileKeyHandle fk, ObjectKind kind, Guid fi
 
 > Naming note: this section also covers the **symmetric** recovery wrap (AES-256-GCM); the rule is HPKE for public-key targets, AES-256-GCM for symmetric keys (§6.2).
 
-- To share a file to a user (account share), wrap an FK to the owner, or enroll a new device, the client fetches the recipient's **X25519 public key** from the directory ([13](13-sharing.md)) and HPKE-seals the payload to it. The result is the `wrapped_key`/`wrappedIdentityKey` blob stored server-side; only the recipient's device can HPKE-open it with the identity private key.
-- HPKE **suite is DHKEM(X25519, HKDF-SHA256) / HKDF-SHA256 / AES-256-GCM** — RFC 9180 IDs `KEM=0x0020`, `KDF=0x0001`, `AEAD=0x0002`. Since this is the shared server implementation, suite agreement is automatic; a **conformance test still wraps with desktop-`Nyxite.Crypto` and unwraps with the server's/Android's/web's HPKE (and vice-versa)** using fixed vectors ([18](18-build-ci-testing.md)).
-- **Recovery escrow uses AES-256-GCM, not HPKE** (DECISION, [OD recovery-wrap]). The recovery blob is the identity bundle (X25519 priv ‖ Ed25519 priv) sealed with **AES-256-GCM under the Argon2id-derived wrapping key** ([07 §7.4](07-key-and-device-management.md)). This follows the system rule (§6.2): HPKE only where the target is a public key; AES-256-GCM where the key is symmetric.
+- To share a file to a user (account share), wrap an FK to the owner, or enroll a new device, the client fetches the recipient's **hybrid X25519 + ML-KEM-768 public key** from the directory ([13](13-sharing.md)) and HPKE-seals the payload to it. The result is the `wrapped_key`/`wrappedIdentityKey` blob stored server-side; only the recipient's device can HPKE-open it with the identity private key.
+- HPKE **suite is the hybrid DHKEM(X25519 + ML-KEM-768) / HKDF-SHA256 / AES-256-GCM** — hybrid suite id **`X25519MLKEM768`** (KDF `0x0001`, AEAD `0x0002`; NIST level 3, §6.2). Since this is the shared server implementation, suite agreement is automatic; a **conformance test still wraps with desktop-`Nyxite.Crypto` and unwraps with the server's/Android's/web's HPKE (and vice-versa)** using fixed vectors ([18](18-build-ci-testing.md)).
+- **Recovery escrow uses AES-256-GCM, not HPKE** (DECISION, [OD recovery-wrap]). The recovery blob is the identity bundle (the X25519 + ML-KEM-768 agreement privates ‖ the Ed25519 + ML-DSA-65 signing privates) sealed with **AES-256-GCM under the Argon2id-derived wrapping key** ([07 §7.4](07-key-and-device-management.md)). This follows the system rule (§6.2): HPKE only where the target is a public key; AES-256-GCM where the key is symmetric — the wrap itself is symmetric and quantum-safe, unchanged; only the wrapped bundle grows to carry the hybrid privates.
 
 ## 6.5 File keys
 
@@ -68,8 +70,8 @@ byte[] Open(ReadOnlySpan<byte> frame, FileKeyHandle fk, ObjectKind kind, Guid fi
 
 ## 6.7 Signing & verifying (tamper detection)
 
-- The client **signs** its key-directory entry (its published X25519/Ed25519 public keys) and, where the protocol calls for it, CRDT updates / share grants with **Ed25519**, so peers can detect a relay that swaps keys or injects updates.
-- The client **verifies** Ed25519 signatures on directory entries it fetches before wrapping a share to them, and on relayed updates where signed. (Full key-transparency/safety-numbers is deferred to Phase 6, [13 §13.6](13-sharing.md); v1.0.0 trust is TLS + signature checks.)
+- The client **signs** its key-directory entry (its published X25519 + ML-KEM-768 wrap keys and Ed25519 + ML-DSA-65 signing keys) and, where the protocol calls for it, CRDT updates / share grants with the **hybrid Ed25519 + ML-DSA-65** signature, so peers can detect a relay that swaps keys or injects updates. A hybrid signature verifies only when **both** halves verify.
+- The client **verifies** hybrid Ed25519 + ML-DSA-65 signatures on directory entries it fetches before wrapping a share to them, and on relayed updates where signed. (Full key-transparency/safety-numbers is deferred to Phase 6, [13 §13.6](13-sharing.md); v1.0.0 trust is TLS + signature checks.)
 
 ## 6.8 Recovery-key derivation
 
@@ -83,7 +85,7 @@ byte[] Open(ReadOnlySpan<byte> frame, FileKeyHandle fk, ObjectKind kind, Guid fi
 - **No homemade crypto.** Only the shared `Nyxite.Crypto` package and the vetted primitive libraries in [02 §2.7](02-tech-stack-and-libraries.md), behind the `ICryptoEngine` interface for agility.
 - **Constant-time** comparisons for tags/tokens (use `CryptographicOperations.FixedTimeEquals`).
 - **Zeroize** key material buffers after use (`CryptographicOperations.ZeroMemory`); hold unwrapped keys only in the `UserSession`.
-- **Known-answer tests** for AES-GCM framing, HPKE wrap/unwrap, Ed25519, X25519, BLAKE3, and Argon2id, plus **cross-client conformance vectors** shared with server/android/web ([18 §18.5](18-build-ci-testing.md)). Because the desktop *is* the server's crypto code, these tests double as the canonical guard that a `Nyxite.Crypto` change stays interoperable.
+- **Known-answer tests** for AES-GCM framing, hybrid HPKE wrap/unwrap (X25519 + ML-KEM-768), hybrid signatures (Ed25519 + ML-DSA-65), BLAKE3, and Argon2id, plus **cross-client conformance vectors** shared with server/android/web ([18 §18.5](18-build-ci-testing.md)). Because the desktop *is* the server's crypto code, these tests double as the canonical guard that a `Nyxite.Crypto` change stays interoperable.
 
 ## 6.10 Group-key wrapping (enterprise/family sharing)
 
@@ -95,15 +97,15 @@ personal key  →  wraps  →  group key  →  wraps  →  DEK (FK)  →  encryp
 
 This adds **no new primitive** — a group public key is just another HPKE target, exactly like a member or device public key. Everything below is the same `Nyxite.Crypto` code and the same pinned suite as §6.2/§6.4; the framing (§6.3) and the content/DEK layer (§6.5) are unchanged.
 
-- **Group keypair.** A group is an **X25519 (HPKE) + Ed25519 (sign)** keypair generated client-side by the creator via `RandomNumberGenerator` / `Nyxite.Crypto` — the *same* keygen as an identity keypair (§6.7). Its **public** half is published as a directory HPKE target anyone may wrap to; its **private** half is never sent unwrapped — it lives on the server only as per-member wrapped blobs.
-- **Wrap the group private key to a member (the group-key grant).** `HPKE-seal(memberX25519Pubkey, groupPrivBundle)` where `groupPrivBundle = X25519 priv ‖ Ed25519 priv` — the DHKEM(X25519,HKDF-SHA256)/HKDF-SHA256/AES-256-GCM suite (§6.2). The resulting **grant blob** carries `group_id | scope_id | member_id | generation | alg_id | hpke_ct` and is **append-only** (rotation bumps `generation` and appends, §7.10). No grant ever contains a plaintext key.
-- **Wrap a DEK to a group (DEK-to-group).** `HPKE-seal(groupX25519Pubkey, FK)` produces a wrapped-key row whose **principal is a group** (per scope/generation), stored alongside the existing per-member `wrapped_key` rows (§6.5). A worker can wrap to the managers-group public key with **no membership in it** — only the directory public key is needed (the enterprise "manager reads all" path, [13 §13.7](13-sharing.md)).
+- **Group keypair.** A group is a **hybrid X25519 + ML-KEM-768 (HPKE) + Ed25519 + ML-DSA-65 (sign)** keypair generated client-side by the creator via `RandomNumberGenerator` / `Nyxite.Crypto` — the *same* keygen as an identity keypair (§6.7). Its **public** half is published as a directory HPKE target anyone may wrap to; its **private** half is never sent unwrapped — it lives on the server only as per-member wrapped blobs.
+- **Wrap the group private key to a member (the group-key grant).** `HPKE-seal(memberHybridPubkey, groupPrivBundle)` where `groupPrivBundle = X25519 + ML-KEM-768 privates ‖ Ed25519 + ML-DSA-65 privates` — the hybrid DHKEM(X25519 + ML-KEM-768)/HKDF-SHA256/AES-256-GCM suite `X25519MLKEM768` (§6.2). The resulting **grant blob** carries `group_id | scope_id | member_id | generation | alg_id | hpke_ct` and is **append-only** (rotation bumps `generation` and appends, §7.10). No grant ever contains a plaintext key.
+- **Wrap a DEK to a group (DEK-to-group).** `HPKE-seal(groupHybridPubkey, FK)` (hybrid X25519 + ML-KEM-768) produces a wrapped-key row whose **principal is a group** (per scope/generation), stored alongside the existing per-member `wrapped_key` rows (§6.5). A worker can wrap to the managers-group public key with **no membership in it** — only the directory public key is needed (the enterprise "manager reads all" path, [13 §13.7](13-sharing.md)).
 - **Unwrap chain (read path).** `HPKE-open` the group-key grant with the **identity private key** → recover the group private key → `HPKE-open` the DEK-to-group wrap with the group private key → recover the `FileKeyHandle` → `Open` the frame (§6.3). Both unwraps run entirely on-device; the server holds only opaque blobs.
-- **`alg_id`-tagged wrap format.** Every group-wrapped blob (grant **and** DEK-to-group) carries an explicit **`alg_id`** naming the wrap algorithm, for crypto-agility. Because a group key wraps *many* DEKs it concentrates any future post-quantum blast radius, so the format is algorithm-agile from day one even though v1 ships the classical pinned suite — the same `ICryptoEngine`-behind-an-interface agility rule as §6.9.
+- **`alg_id`-tagged wrap format.** Every group-wrapped blob (grant **and** DEK-to-group) carries an explicit **`alg_id`** naming the wrap algorithm, for crypto-agility. v1 pins the **hybrid post-quantum suite `X25519MLKEM768`** (§6.2); because a group key wraps *many* DEKs it concentrates the blast radius of any future primitive change, so the format stays algorithm-agile — a later suite swap re-wraps only the small keys, never content — the same `ICryptoEngine`-behind-an-interface agility rule as §6.9.
 
 `ICryptoEngine` gains group overloads, still delegating to the shared package:
 ```csharp
-GroupKeyPair GenerateGroupKeyPair();                                             // X25519 + Ed25519, via Nyxite.Crypto
+GroupKeyPair GenerateGroupKeyPair();                                             // hybrid X25519+ML-KEM-768 + Ed25519+ML-DSA-65, via Nyxite.Crypto
 byte[] WrapGroupKeyToMember(GroupKeyPair group, ReadOnlySpan<byte> memberPubkey); // → group-key grant (alg_id-tagged)
 GroupKeyHandle UnwrapGroupKey(ReadOnlySpan<byte> grant, IdentityKeyHandle identity);
 byte[] WrapDekToGroup(FileKeyHandle fk, ReadOnlySpan<byte> groupPubkey);          // → DEK-to-group wrap (alg_id-tagged)

@@ -76,15 +76,17 @@ All primitives are the server's canonical implementations, consumed via **`Nyxit
 
 | Purpose | Primitive | Provider (inside `Nyxite.Crypto`) |
 |---------|-----------|-----------------------------------|
-| AEAD (AES-256-GCM) | AES-256-GCM (96-bit nonce, 128-bit tag) | `System.Security.Cryptography.AesGcm` (BCL) |
-| HPKE (X25519+HKDF-SHA256+AES-256-GCM) | RFC 9180 `KEM=0x0020`, `KDF=0x0001`, `AEAD=0x0002` | the shared lib's HPKE impl (BouncyCastle or a vetted RFC 9180 impl) — **same code as the server** |
-| Signing | Ed25519 | shared lib (BouncyCastle/NSec) |
-| Key agreement | X25519 | shared lib (BouncyCastle/NSec) |
-| Content address | BLAKE3-256 | **`Blake3`** (official Rust binding) |
-| Recovery KDF | Argon2id (m=64 MiB, t=3, p=1) | **`Konscious.Security.Cryptography.Argon2`** or libsodium |
+| AEAD (AES-256-GCM) | AES-256-GCM (96-bit nonce, 128-bit tag) — quantum-safe, unchanged | `System.Security.Cryptography.AesGcm` (BCL) |
+| HPKE (hybrid) | **Hybrid DHKEM(X25519 + ML-KEM-768) / HKDF-SHA256 / AES-256-GCM** — suite id `X25519MLKEM768`, NIST level 3 | a **hybrid-capable HPKE** impl in the shared lib — **same code as the server** (see the hybrid-crypto library note below) |
+| Signing | **Ed25519 + ML-DSA-65** (hybrid) | hybrid-capable signing in the shared lib |
+| Key agreement | **X25519 + ML-KEM-768** (hybrid) | hybrid-capable KEM in the shared lib |
+| Content address | BLAKE3-256 — quantum-safe, unchanged | **`Blake3`** (official Rust binding) |
+| Recovery KDF | Argon2id (m=64 MiB, t=3, p=1) — quantum-safe, unchanged | **`Konscious.Security.Cryptography.Argon2`** or libsodium |
 | OS key wrap (desktop-only add) | DPAPI / Secret Service | `System.Security.Cryptography.ProtectedData` (Windows) / libsecret D-Bus (Linux) ([07 §7.2](07-key-and-device-management.md)) |
 
-> Because the desktop and server share `Nyxite.Crypto`, the framing and HPKE suite are **identical by construction** — the cross-client risk that Android/web carry (re-deriving the suite IDs) does not exist here. The desktop still runs the shared conformance vectors in CI so a change to `Nyxite.Crypto` that breaks web/Android is caught ([18 §18.5](18-build-ci-testing.md)).
+> **Post-quantum hybrid at v1.0.0 ([OPEN-DECISIONS PQ-1–PQ-4](https://github.com/Nyxite/Nyxite)).** Every asymmetric primitive above is now **hybrid classical + PQC** (X25519 + ML-KEM-768 for HPKE/key-agreement, Ed25519 + ML-DSA-65 for signatures, NIST level 3); symmetric primitives are unchanged. Because the desktop and server share `Nyxite.Crypto`, the framing and hybrid HPKE suite are **identical by construction** — the cross-client risk that Android/web carry (re-deriving the suite IDs) does not exist here. The desktop still runs the shared conformance vectors in CI so a change to `Nyxite.Crypto` that breaks web/Android is caught ([18 §18.5](18-build-ci-testing.md)).
+>
+> **Library gap — FOLLOW-UP (spike).** The providers previously named for the classical suite (**BouncyCastle / NSec / libsodium**) implement RFC 9180 HPKE over **X25519 only** and **Ed25519 only** — none ships the **hybrid X25519 + ML-KEM-768 HPKE KEM** or the **Ed25519 + ML-DSA-65 hybrid signature** out of the box. The shared `Nyxite.Crypto` must be sourced/built against a hybrid-capable stack (ML-KEM-768 / ML-DSA-65 are FIPS 203 / 204; candidate paths include a post-quantum-enabled BouncyCastle, `liboqs`/`liboqs-dotnet`, or .NET's emerging PQC surface). **This choice is server-owned and not made here** — flagged so the desktop build tracks it; the desktop simply consumes whatever hybrid-capable `Nyxite.Crypto` the server ships. See [06 §6.2](06-cryptography.md) and [19 §19.0](19-open-questions.md).
 
 ## 2.8 CRDT (shared)
 

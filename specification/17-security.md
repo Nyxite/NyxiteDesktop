@@ -9,7 +9,8 @@ The server-side threat model is covered by [server 13](https://github.com/Nyxite
 | Lost/stolen unlocked machine | App lock (OS credential / Windows Hello / app passphrase), secure window, idle auto-lock. |
 | Lost/stolen machine at rest | OS-keystore-wrapped DB master + identity keys; SQLCipher whole-DB encryption; app-lock factor beyond mere OS login. |
 | Other OS users on a shared machine | Per-OS-user data paths + DPAPI `CurrentUser` / per-user Secret Service; app lock so another logged-in user (or one with the OS password) still can't unseal without the app factor. |
-| Malicious/curious server or operator | E2EE: only ciphertext leaves the device; BLAKE3 verify on download; Ed25519 verify on directory entries/updates. |
+| Malicious/curious server or operator | E2EE: only ciphertext leaves the device; BLAKE3 verify on download; hybrid Ed25519 + ML-DSA-65 verify on directory entries/updates. |
+| Harvest-now-decrypt-later (a future quantum adversary against stored ciphertext) | **Post-quantum hybrid** asymmetric crypto at v1.0.0 — file-key wraps use hybrid X25519 + ML-KEM-768 HPKE and all signatures are hybrid Ed25519 + ML-DSA-65 (NIST level 3), so the indefinitely-stored wrapped keys stay confidential unless *both* the classical and PQC halves break; symmetric content encryption (AES-256-GCM) is already quantum-safe ([06 §6.2](06-cryptography.md)). |
 | Tampering/withholding relay | Content-address verification + signature checks; updates that don't verify are rejected. |
 | Backup/cloud-sync exfiltration | Store under app-private, non-roaming paths; document excluding the data dir from OS/file-sync backups; never write plaintext outside an explicit user export. |
 | Screenshot/screen-share capture | Best-effort secure-window / exclude-from-capture where the OS supports it (configurable); honest that this is weaker on desktop than mobile. |
@@ -58,4 +59,4 @@ The server-side threat model is covered by [server 13](https://github.com/Nyxite
 - Already-downloaded content can't be recalled after a share revocation (rotation only protects future content, [13 §13.5](13-sharing.md)).
 - Desktop at-rest protection is **honestly weaker than mobile's hardware-backed keystores** ([07 §7.1](07-key-and-device-management.md)): DPAPI/Secret Service unseal on OS login, so a privileged on-device attacker who owns the logged-in session can reach what the session can. The app lock raises the bar but a rooted/admin-compromised machine can defeat at-rest protections.
 - The full-corpus default concentrates value on the desktop; users storing especially sensitive material should consider per-subtree `dontKeep` plus app lock with a short idle window.
-- v1.0.0 directory trust is TLS + Ed25519 signatures, not full key transparency ([13 §13.6](13-sharing.md)); deferred to Phase 6.
+- v1.0.0 directory trust is TLS + hybrid Ed25519 + ML-DSA-65 signatures, not full key transparency ([13 §13.6](13-sharing.md)); deferred to Phase 6.
