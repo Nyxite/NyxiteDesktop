@@ -2,7 +2,7 @@
 
 This folder is the detailed, implementation-level specification for the **Nyxite Desktop client** — the native **Avalonia (C# / .NET)** application for **Windows and Linux** that lets a user read, write, hand-draw, organize, sync, collaborate on, share, and search end-to-end-encrypted notes and documents from a desktop computer.
 
-It expands the architectural planning documents in the central [`Nyxite`](https://github.com/Nyxite/Nyxite) repository and the [`server` specification](https://github.com/Nyxite/server) into a concrete client build specification covering the full v1.0.0 product across all roadmap phases.
+It expands the architectural planning documents in the central [`Nyxite`](https://github.com/Nyxite/Nyxite) repository and the [`server` specification](https://github.com/Nyxite/NyxiteServer) into a concrete client build specification covering the full v1.0.0 product across all roadmap phases.
 
 It is written to be **self-contained enough to build the app from**: it names the libraries, the project/solution graph, the local schema, the API/relay calls, the crypto primitives and how they map to .NET APIs, the editor and sync internals, the UI surface, and the build/test/CI/packaging setup.
 

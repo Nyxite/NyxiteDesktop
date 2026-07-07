@@ -34,7 +34,7 @@ The crypto and CRDT layers are **not** re-chosen here — they are the **shared 
 | Pointer/pressure input | Avalonia `PointerPressed`/`PointerMoved` with **`PointerPointProperties.Pressure`**, `XTilt`/`YTilt`, `Twist` where the platform/driver exposes them (Windows Ink, Linux libinput, Wacom) | Captures pressure/tilt for natural ink ([10 §10.4](10-editors.md)). |
 | Stroke smoothing | Catmull-Rom / the ink model's own smoothing | Natural curves from sampled points. |
 
-The on-disk/on-wire **ink stroke format** is a Nyxite-defined, versioned, encryptable vector format **co-designed with and shared with Android** ([10 §10.5](10-editors.md), [Android 10 §10.5](https://github.com/Nyxite/android)); Skia/Avalonia is the capture/render engine, not the storage format.
+The on-disk/on-wire **ink stroke format** is a Nyxite-defined, versioned, encryptable vector format **co-designed with and shared with Android** ([10 §10.5](10-editors.md), [Android 10 §10.5](https://github.com/Nyxite/NyxiteAndroid)); Skia/Avalonia is the capture/render engine, not the storage format.
 
 ## 2.4 Concurrency, hosting & DI
 

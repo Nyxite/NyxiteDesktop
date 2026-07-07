@@ -1,6 +1,6 @@
 # 06 — Cryptography
 
-This is the most consequential module (`Nyxite.Desktop.Crypto`). On desktop it is a **thin adapter over the shared `Nyxite.Crypto` package** — the *same code the server is built from* ([README](README.md)) — so the framing and HPKE suite are **byte-identical to the server by construction**, not by re-derivation. The adapter adds only desktop concerns: buffer handling, streaming for large blobs, and integration with the OS keystore ([07](07-key-and-device-management.md)). Everything here mirrors [server 07](https://github.com/Nyxite/server).
+This is the most consequential module (`Nyxite.Desktop.Crypto`). On desktop it is a **thin adapter over the shared `Nyxite.Crypto` package** — the *same code the server is built from* ([README](README.md)) — so the framing and HPKE suite are **byte-identical to the server by construction**, not by re-derivation. The adapter adds only desktop concerns: buffer handling, streaming for large blobs, and integration with the OS keystore ([07](07-key-and-device-management.md)). Everything here mirrors [server 07](https://github.com/Nyxite/NyxiteServer).
 
 ## 6.1 Posture
 
@@ -75,7 +75,7 @@ byte[] Open(ReadOnlySpan<byte> frame, FileKeyHandle fk, ObjectKind kind, Guid fi
 
 - The recovery key is a high-entropy phrase shown once. The wrapping key is derived via **Argon2id** with parameters **m = 64 MiB, t = 3, p = 1** (tunable; the actual values are stored non-secret in `recovery_blobs.kdf_params`). The client reads those params for unwrap and uses them when (re)generating the escrow so any device can recover ([07 §7.4](07-key-and-device-management.md)).
 - The derived key then seals the escrow with **AES-256-GCM** (not HPKE — symmetric key, per §6.4). The recovery-blob shape is `{ version, kdf:{alg:"argon2id", m, t, p, salt(16)}, nonce(12), ciphertext, tag(16) }` with **AAD = `userId ‖ version`** ([07 §7.4](07-key-and-device-management.md)).
-- Desktop has ample CPU/RAM, so the canonical `(m=64 MiB, t=3, p=1)` runs comfortably; the client must still honor the **server-stored params** rather than its own, so a blob written by a mobile device (possibly tuned lower) round-trips ([Android 06 §6.8](https://github.com/Nyxite/android)).
+- Desktop has ample CPU/RAM, so the canonical `(m=64 MiB, t=3, p=1)` runs comfortably; the client must still honor the **server-stored params** rather than its own, so a blob written by a mobile device (possibly tuned lower) round-trips ([Android 06 §6.8](https://github.com/Nyxite/NyxiteAndroid)).
 
 ## 6.9 Implementation rules
 

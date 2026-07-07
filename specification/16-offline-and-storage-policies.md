@@ -60,7 +60,7 @@ Persisted as a `KeepOnDevice` setting on files and an inherited default on folde
 
 ## 16.7 Plaintext export / external-editor interop (desktop-only)
 
-This capability is intentionally a **desktop feature, deferred from Android** ([Android 16 §16.7](https://github.com/Nyxite/android)). It lets a power user take an encrypted note **out** of the boundary deliberately — to edit in an external app, attach elsewhere, or archive — with the security trade-off made explicit and consensual.
+This capability is intentionally a **desktop feature, deferred from Android** ([Android 16 §16.7](https://github.com/Nyxite/NyxiteAndroid)). It lets a power user take an encrypted note **out** of the boundary deliberately — to edit in an external app, attach elsewhere, or archive — with the security trade-off made explicit and consensual.
 
 - **Export a working copy**: `ExportWorkingCopy` decrypts the current head and writes plaintext (`.md`/`.txt`, or the rendered/exported form) to a **user-chosen path**. A clear, non-dismissable warning states that the exported file is **outside Nyxite's encryption** and is the user's responsibility. The action is audited locally and never automatic.
 - **Open in external editor (round-trip)** *(opt-in)*: the app may write the plaintext to a **temporary working file**, launch the OS-default (or user-chosen) editor, **watch the file for changes**, and on save **re-import** the bytes — applying them as a CRDT edit (text) or a new blob head (ink/binary). On close it **securely deletes** the temp file (best-effort overwrite + unlink; the spec is honest that secure deletion on modern filesystems/SSDs is not guaranteed). This is off by default and gated behind the same warnings.

@@ -1,6 +1,6 @@
 # 08 — Sync Engine
 
-Reconciles the device's local state ([04](04-local-data-model.md)) with the server for every readable file, honoring per-file policy and the right model per content type — **all over ciphertext** ([server 06](https://github.com/Nyxite/server)). The server moves bytes, sequences encrypted updates, and tracks versions/policies; the client does all crypto and merge. On desktop the **default posture is full-corpus**: unless the user opts a subtree out, the engine proactively pulls, decrypts, and indexes everything the account can read ([16 §16.2](16-offline-and-storage-policies.md)).
+Reconciles the device's local state ([04](04-local-data-model.md)) with the server for every readable file, honoring per-file policy and the right model per content type — **all over ciphertext** ([server 06](https://github.com/Nyxite/NyxiteServer)). The server moves bytes, sequences encrypted updates, and tracks versions/policies; the client does all crypto and merge. On desktop the **default posture is full-corpus**: unless the user opts a subtree out, the engine proactively pulls, decrypts, and indexes everything the account can read ([16 §16.2](16-offline-and-storage-policies.md)).
 
 ## 8.1 Content-type → sync model
 

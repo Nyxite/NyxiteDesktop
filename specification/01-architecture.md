@@ -31,7 +31,7 @@ It follows a **Clean-architecture layering** with **MVVM** (unidirectional state
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-The **domain layer is platform-free** so it can be unit-tested on the runtime without Avalonia, and so it can reuse `Nyxite.Domain`/`Nyxite.Contracts` types directly. It mirrors the server's discipline of keeping `Domain`/`Contracts`/`Crypto` free of host concerns ([server 01](https://github.com/Nyxite/server)).
+The **domain layer is platform-free** so it can be unit-tested on the runtime without Avalonia, and so it can reuse `Nyxite.Domain`/`Nyxite.Contracts` types directly. It mirrors the server's discipline of keeping `Domain`/`Contracts`/`Crypto` free of host concerns ([server 01](https://github.com/Nyxite/NyxiteServer)).
 
 ## 1.2 The cardinal rule: plaintext never crosses the network boundary
 

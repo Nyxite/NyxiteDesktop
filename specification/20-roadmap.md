@@ -1,6 +1,6 @@
 # 20 — Roadmap (Desktop)
 
-Phase order mirrors the server ([server 15](https://github.com/Nyxite/server)) so the client and backend land each capability together. v1.0.0 is the complete E2EE desktop client (Phases 0–6); phases are build order, not separate products. **E2EE is foundational from Phase 0** and never retrofitted.
+Phase order mirrors the server ([server 15](https://github.com/Nyxite/NyxiteServer)) so the client and backend land each capability together. v1.0.0 is the complete E2EE desktop client (Phases 0–6); phases are build order, not separate products. **E2EE is foundational from Phase 0** and never retrofitted.
 
 Before Phase 1 logic is committed, run the **early spikes** ([18 §18.8](18-build-ci-testing.md)): ydotnet interop, `Nyxite.Crypto`/`Nyxite.Crdt` packaging across RIDs, SQLCipher-on-desktop, OS-keystore + app-lock, ink input, SignalR relay.
 

@@ -1,6 +1,6 @@
 # 17 — Security (Device-Side)
 
-The server-side threat model is covered by [server 13](https://github.com/Nyxite/server) (zero-knowledge: DB/blob theft, malicious operator, curious admin all yield no content). This document covers the **device-side** threats the desktop client must defend, since on a desktop the plaintext and keys *do* live locally — and the desktop, holding the **full corpus**, is the highest-value at-rest target across the platform.
+The server-side threat model is covered by [server 13](https://github.com/Nyxite/NyxiteServer) (zero-knowledge: DB/blob theft, malicious operator, curious admin all yield no content). This document covers the **device-side** threats the desktop client must defend, since on a desktop the plaintext and keys *do* live locally — and the desktop, holding the **full corpus**, is the highest-value at-rest target across the platform.
 
 ## 17.1 Threats considered
 

@@ -1,6 +1,6 @@
 # 11 — Search (Client-Side, Full-Corpus)
 
-The server holds **no index** (it can't read content). Search lives where the keys and plaintext live — on the device ([server 11](https://github.com/Nyxite/server)). The **desktop is the platform's full-corpus search surface**: with room to hold the whole library it indexes **everything the account can read**, and is the reference "search everything" experience that web and Android (subset-only) defer to.
+The server holds **no index** (it can't read content). Search lives where the keys and plaintext live — on the device ([server 11](https://github.com/Nyxite/NyxiteServer)). The **desktop is the platform's full-corpus search surface**: with room to hold the whole library it indexes **everything the account can read**, and is the reference "search everything" experience that web and Android (subset-only) defer to.
 
 ## 11.1 Scope on Desktop
 

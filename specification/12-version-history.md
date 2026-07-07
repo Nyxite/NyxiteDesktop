@@ -1,6 +1,6 @@
 # 12 — Version History
 
-Full history of **encrypted, content-addressed snapshots**; **diffs and restore run on the device** because the server can't read either version ([server 10](https://github.com/Nyxite/server)). The desktop produces many of these snapshots itself ([09 §9.6](09-realtime-collaboration.md)).
+Full history of **encrypted, content-addressed snapshots**; **diffs and restore run on the device** because the server can't read either version ([server 10](https://github.com/Nyxite/NyxiteServer)). The desktop produces many of these snapshots itself ([09 §9.6](09-realtime-collaboration.md)).
 
 ## 12.1 Listing
 

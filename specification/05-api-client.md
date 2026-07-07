@@ -1,6 +1,6 @@
 # 05 — REST API Client
 
-Implements the server REST surface ([server 04](https://github.com/Nyxite/server)) under `Nyxite.Desktop.Network`. The client speaks **JSON for structure/metadata** (via `Nyxite.Contracts` DTOs) and **binary streams for ciphertext**; it never serializes plaintext content ([01 §1.2](01-architecture.md)).
+Implements the server REST surface ([server 04](https://github.com/Nyxite/NyxiteServer)) under `Nyxite.Desktop.Network`. The client speaks **JSON for structure/metadata** (via `Nyxite.Contracts` DTOs) and **binary streams for ciphertext**; it never serializes plaintext content ([01 §1.2](01-architecture.md)).
 
 ## 5.1 Configuration
 
