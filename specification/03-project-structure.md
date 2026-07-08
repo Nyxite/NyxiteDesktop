@@ -85,6 +85,8 @@ Root namespace: **`Nyxite.Desktop`** (e.g. `Nyxite.Desktop.Crypto`, `Nyxite.Desk
 ## 3.5 Resource & asset strategy
 
 - App/tray/window icons ship from the master [`Nyxite/icons/desktop`](https://github.com/Nyxite/Nyxite) set; wire them in `App` and the packaging manifests.
+- **Design tokens are a build output, not hand-edited.** The generated Avalonia `ResourceDictionary` / C# resource constants under `Nyxite.Desktop.Ui` are produced by the CI token pipeline from the shared `nyxite-tokens.json` and must never be edited by hand (edits belong upstream in [`NyxiteDesign`](https://github.com/Nyxite/NyxiteDesign)); merged into the app theme and consumed as `DynamicResource` ([02 §2.2](02-tech-stack-and-libraries.md), [OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite)).
+- **Fonts are bundled, never fetched.** Manrope (UI) and Source Serif 4 (document content) ship as app assets under `Nyxite.Desktop.Ui`; they are self-hosted and never loaded from Google Fonts or any external CDN at runtime ([15 §15.4](15-ui-and-navigation.md)).
 - Strings centralized (resx or a strings service) for future localization; no user content in resources.
 - Conformance test vectors (CRDT wire, crypto KATs) live under `tests/.../Resources` and are the **same shared vector files** co-owned with server/web/android ([18 §18.6](18-build-ci-testing.md)).
 

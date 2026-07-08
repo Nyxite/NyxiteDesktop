@@ -19,7 +19,7 @@ The crypto and CRDT layers are **not** re-chosen here — they are the **shared 
 | Concern | Choice | Rationale |
 |---------|--------|-----------|
 | UI toolkit | **Avalonia 11** | Single C# UI for Windows + Linux; supports custom-drawn surfaces required by the ink canvas. |
-| Theme / design system | **Fluent theme** (`Avalonia.Themes.Fluent`) + Nyxite color resources | Modern, adaptive; dark theme first-class (fits the "Nyx" night branding, [15 §15.4](15-ui-and-navigation.md)). |
+| Theme / design system | **Fluent theme** (`Avalonia.Themes.Fluent`) base + the **NyxiteDesign** token layer | Colors, typography, spacing/radius/shadow/motion are **not hand-defined here** — they come from the shared `nyxite-tokens.json` single source of truth ([OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite), [`NyxiteDesign`](https://github.com/Nyxite/NyxiteDesign)), CI-generated into an Avalonia `ResourceDictionary` / C# resource constants and bound as **`DynamicResource`** brushes; light/dark switch via Avalonia **`ThemeVariant`**. Dark theme is first-class (fits the "Nyx" night branding, [15 §15.4](15-ui-and-navigation.md)). |
 | MVVM (default) | **CommunityToolkit.Mvvm** | Source-generated `[ObservableProperty]`/`[RelayCommand]`; lowest ceremony for the majority of screens ([01 §1.3](01-architecture.md)). |
 | MVVM (reactive screens) | **ReactiveUI** (`Avalonia.ReactiveUI`) | Stream-shaped state in the editor/collaboration/search surfaces (`WhenAnyValue`, `ReactiveCommand`, `Throttle`). |
 | Markdown render | **Markdig** (→ Avalonia render) | CommonMark + extensions parser; render to Avalonia controls for view mode ([10 §10.2](10-editors.md)). No remote fetch from content (privacy). |

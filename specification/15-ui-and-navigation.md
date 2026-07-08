@@ -43,9 +43,10 @@ Avalonia 11 + Fluent theme, a resizable multi-window desktop layout, with the ed
 
 ## 15.4 Theming & brand
 
-- Fluent theme with a Nyxite color scheme. **Dark theme first-class** (notes app, night use; fits the "Nyx" night branding); honor the OS light/dark preference by default.
+- The UI implements the shared **NyxiteDesign** system ([OPEN-DECISIONS DS](https://github.com/Nyxite/Nyxite), [`NyxiteDesign`](https://github.com/Nyxite/NyxiteDesign)) end-to-end: **Layer A** = the token set (deep-purple accent, semantic light/dark themes, spacing/radius/shadow/motion) applied to Avalonia's standard controls (Button, TextBox, ToggleSwitch, Slider, TabControl, ComboBox, DataGrid, …); **Layer B** = the Nyxite app shell — the Document/Presentation/Spreadsheet **rail**, the three toolbar densities (classic/slim/minimal), and the canvas. Bespoke Nyxite chrome (rail, toolbar modes, segmented control, command palette, comment thread, presence) is built as **custom Avalonia `ControlTheme`s**, not one-off styling.
+- Token values (colors, typography, spacing) are **CI-generated from `nyxite-tokens.json`**, not hand-authored, and consumed as `DynamicResource`; **light/dark** is Avalonia `ThemeVariant`, honoring the OS preference by default ([02 §2.2](02-tech-stack-and-libraries.md), [03 §3.5](03-project-structure.md)). **Dark theme first-class** (notes app, night use; fits the "Nyx" night branding).
 - App icon, tray icon, and window icons from `Nyxite/icons/desktop` ([03 §3.5](03-project-structure.md)).
-- Typography legible for long-form reading and code; respect OS font scaling / DPI on both platforms.
+- Typography is **Manrope** (UI) + **Source Serif 4** (document content), legible for long-form reading and code; respect OS font scaling / DPI on both platforms. **Fonts are bundled with the app** (self-hosted assets) and **never fetched from Google Fonts or any external CDN at runtime** — a privacy requirement, since a runtime font fetch would leak usage to a third party ([17](17-security.md)).
 
 ## 15.5 Accessibility & input
 
