@@ -60,3 +60,11 @@ The server-side threat model is covered by [server 13](https://github.com/Nyxite
 - Desktop at-rest protection is **honestly weaker than mobile's hardware-backed keystores** ([07 §7.1](07-key-and-device-management.md)): DPAPI/Secret Service unseal on OS login, so a privileged on-device attacker who owns the logged-in session can reach what the session can. The app lock raises the bar but a rooted/admin-compromised machine can defeat at-rest protections.
 - The full-corpus default concentrates value on the desktop; users storing especially sensitive material should consider per-subtree `dontKeep` plus app lock with a short idle window.
 - v1.0.0 directory trust is TLS + hybrid Ed25519 + ML-DSA-65 signatures, not full key transparency ([13 §13.6](13-sharing.md)); deferred to Phase 6.
+
+## 17.9 Support plane — the one consensual non-E2EE exception
+
+In-app bug reporting ([15 §15.7](15-ui-and-navigation.md)) runs on the project's **single, deliberate exception to zero-knowledge**: a **consensual, non-E2EE support plane** that a user enters only by an explicit action, provably **disjoint from the content plane** (SUP-1). It is safe because it does not weaken content E2EE:
+
+- A report carries **no content key and no content-plane ciphertext** — only the free text, the redacted screenshot, and a user-reviewed diagnostic envelope; the content-plane zero-knowledge guarantee is **untouched**. The load-bearing protections here are the explicit non-E2EE + "goes to the Nyxite maintainer" notice + GDPR shown before send, and the user's own redaction — **not** encryption (reports are stored server-readable by the maintainer, SUP-1/SUP-8).
+- **Screenshot redaction is destructive and client-side (SUP-2):** black-box + blur are **flattened into the pixels (re-encoded, EXIF stripped) before upload**; the original image and any redaction mask are **never sent** — no peel-back layer.
+- The client **never contacts the helpdesk directly**; it relays through its own `NyxiteServer` as an authenticating relay (SUP-7). Detail: master feature [support.md](https://github.com/Nyxite/Nyxite), [NyxiteSupport `specification/02`](https://github.com/Nyxite/NyxiteSupport), [OPEN-DECISIONS SUP-1–SUP-9](https://github.com/Nyxite/Nyxite).

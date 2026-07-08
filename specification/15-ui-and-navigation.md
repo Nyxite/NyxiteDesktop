@@ -18,6 +18,7 @@ Avalonia 11 + Fluent theme, a resizable multi-window desktop layout, with the ed
 - **History** — `Versions(fileId)`, `DiffViewer(fileId, fromSeq, toSeq)`.
 - **Share** — `ShareManage(targetType, targetId)`, `OpenLink(token)` (deep-link entry).
 - **Settings** — `Settings`, `Security`, `Devices`, `Storage`, `Accounts`, `About`.
+- **Support** — `ReportBug`, `MyTickets` (present **only when the server advertises `support.enabled`**; see [§15.7](#157-bug-reporting--support)).
 
 **Account switcher**: because the app is **multi-account from v1.0.0** ([14 §14.7](14-authentication.md)), a persistent account switcher (window header / nav-pane header) shows the active account and lets the user switch or add one. Switching re-roots Browse to the newly active account's data and disposes the prior account's in-memory session ([01 §1.8](01-architecture.md)).
 
@@ -55,3 +56,15 @@ Avalonia 11 + Fluent theme, a resizable multi-window desktop layout, with the ed
 ## 15.6 Empty/error/loading states
 
 Every screen defines explicit loading, empty (no projects/files/results), offline, locked (needs unlock/enrollment), and error states; no silent blank screens.
+
+## 15.7 Bug reporting & support
+
+In-app bug reporting routing to the maintainer-run `NyxiteSupport` helpdesk. This runs on the project's **one deliberate, consensual non-E2EE support plane**, disjoint from the content plane — see [17 §17.9](17-security.md), the master feature [support.md](https://github.com/Nyxite/Nyxite), the [NyxiteSupport `specification/02`](https://github.com/Nyxite/NyxiteSupport), and [OPEN-DECISIONS SUP-1–SUP-9](https://github.com/Nyxite/Nyxite).
+
+- **Capability-gated surface (SUP-9).** The **"Report a bug"** entry (in the nav / `About` / help affordances) and the **"My tickets"** view appear **only when the server advertises the `support.enabled` capability flag** (v1 = the maintainer's official instance(s) only). Where the flag is absent the surfaces are **simply absent** — no disabled control, no hint.
+- **Report composer.** Free-text **title + description**, plus an optional screenshot and the diagnostic envelope below.
+- **Screenshot capture + destructive redaction (SUP-2).** Optional capture of the current view via a **native app-window grab**, opened in a redaction editor offering **black-box** and **blur** tools. Redaction is **destructive and client-side**: the redacted regions are **flattened into the pixels (re-encoded) before upload**, EXIF/metadata stripped; the **original image and any redaction mask are never sent** — there is no peel-back layer. Redaction is manual (the user decides what to hide).
+- **Consent + destination notice before send (SUP-1).** Before a report can transmit, the user must confirm a clear notice that — **unlike their files — this report is *not* end-to-end encrypted and goes to the Nyxite maintainer**, shown alongside a GDPR disclosure. A report carries **no content key and no content-plane ciphertext**.
+- **User-reviewable, editable diagnostic envelope.** A non-content technical bundle shown for **review + edit** before send: app version/build, platform/OS, locale, the **current screen/route id** (a UI location, never a file/project name or any content), **scrubbed** client-side error logs / recent stack traces, and coarse connection/relay state. Nothing is attached that is not represented in this envelope.
+- **"My tickets" view (SUP-3).** An account user sees their own reports' status, the operator's **public replies**, and gets **in-app notifications** of updates — a genuine two-way thread, not fire-and-forget. Guests (share/guest sessions) instead supply an email + optional name and receive replies via email + a tokenized no-login link (SUP-6).
+- **Submission via the server as an authenticating relay (SUP-7).** The client **never contacts the helpdesk directly**: it submits to its own `NyxiteServer`, which authenticates the submitter and relays to `NyxiteSupport` tagged with the instance fingerprint + an opaque user reference. Submission is best-effort and off the critical path; a transport failure surfaces a retryable error and never blocks the app.
