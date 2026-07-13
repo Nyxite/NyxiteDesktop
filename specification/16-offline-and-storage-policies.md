@@ -1,6 +1,6 @@
 # 16 — Offline & Local Storage
 
-Each file is encrypted under its **own key** and fetched independently, so local storage is a set of **per-file local copies the user controls**. Unlike the conservative mobile default, the **desktop default is full-corpus**: keep, decrypt, and index everything the account can read — the desktop is the platform's "everything is here, searchable, offline" surface ([11](11-search.md)). The user can still opt heavy subtrees out. Everything kept on-device stays **encrypted at rest** ([17](17-security.md)).
+Each file is encrypted under its **own key** and fetched independently, so local storage is a set of **per-file local copies the user controls**. Unlike the conservative mobile default, the **desktop default is full-corpus**: keep, decrypt, and index everything the account can read — the desktop is the platform's "everything is here, searchable, offline" surface ([11](11-search.md)). The user can still opt heavy subtrees out. Kept files are **encrypted at rest by default** ([17](17-security.md)); the **desktop-only plaintext-at-rest tri-state** ([§16.2a](#162a-plaintext-at-rest-tri-state-desktop-only), SPECIFICATION §6/§15) is the one exception, opt-in per project/folder/file (web and Android are always encrypted at rest).
 
 ## 16.1 What is stored where
 
@@ -29,11 +29,22 @@ Cascade rules:
 - A file's effective state = its own explicit setting if present, else the nearest ancestor's setting, else the account default (**keep**).
 - New files inherit their parent's effective setting.
 
-Behavior of a **kept** file: proactively downloaded, decrypted, **indexed for search** ([11](11-search.md)), and available fully offline. It remains encrypted at rest; "keep on device" controls *availability*, not whether it's encrypted.
+Behavior of a **kept** file: proactively downloaded, decrypted, **indexed for search** ([11](11-search.md)), and available fully offline. It remains encrypted at rest **unless** the separate plaintext-at-rest tri-state ([§16.2a](#162a-plaintext-at-rest-tri-state-desktop-only)) puts its scope in plaintext; "keep on device" controls *availability* (a separate axis from *at-rest encryption*).
 
 This is a **client-local, per-device** choice (each of the user's devices keeps its own selection) and is **never sent to the server**. It is *not* a server sync policy: every kept and not-kept file is `server-default` server-side ([08 §8.2](08-sync-engine.md)). The separate server **`excluded`** choice ("device-only, never upload to the server") remains available per file for content the user never wants to leave the device. (`pinned-local` is **not** a sync policy — offline pinning is exactly this `KeepOnDevice` field.)
 
 Persisted as a `KeepOnDevice` setting on files and an inherited default on folders/projects ([04 §4.2](04-local-data-model.md)).
+
+## 16.2a Plaintext-at-rest (tri-state, desktop-only)
+
+Ratified by the master spec (SPECIFICATION **§6** + data-safety **§15**): the **desktop client only** may keep synced files **in plaintext on local disk**, via a **tri-state** toggle — `inherit` (default) / `plaintext` / `encrypted` — cascading **per project / folder / file**, root default `encrypted`. This is a **separate axis** from keep-on-device (§16.2): keep-on-device controls *availability*; this controls *at-rest encryption* of the kept copy.
+
+- **Client-local only.** The tri-state is a per-device setting the **zero-knowledge server never sees**; the server still stores/relays **ciphertext only** and holds no content key. **Web and Android stay encrypted at rest** — this toggle does not exist there.
+- **Working copy replaced, history stays encrypted.** For a `plaintext` scope the plaintext file **replaces** the local copy (no encrypted local duplicate); **version-history snapshots stay encrypted and content-addressed** regardless — only the current working copy is plaintext.
+- **Data-safety (SPECIFICATION §15).** Because a plaintext scope keeps **no BLAKE3-verified encrypted local copy**, the **server ciphertext is the durable backstop**; the plaintext is **integrity-checked on read** against the content hash in metadata, and local writes still honor **write-then-swap** and **soft-delete**. The security cost is explicit and user-accepted: **desktop disk theft yields content** for plaintext scopes — desktop-only, never affecting the server or other devices.
+- Persisted as a tri-state field on files with an inherited default on folders/projects ([04 §4.2](04-local-data-model.md)), precedence resolving like the keep-on-device cascade.
+
+> **Open (HB-1 — desktop-owned).** The detailed mechanics are still to be specified: how a plaintext-on-disk working copy round-trips through the Yrs/CRDT relay path and what "minimal CRDT/sync state" persists ([08](08-sync-engine.md), [09](09-realtime-collaboration.md)); whether a plaintext file is still indexed in the encrypted FTS5 store ([11](11-search.md)); the exact integrity-check-and-restore-from-server-ciphertext flow; and the Settings/Storage toggle UI ([15](15-ui-and-navigation.md)). Tracked as blocker **HB-1** in `IMPLEMENTATION-READINESS.md`. The **decision** (plaintext-at-rest exists, desktop-only, tri-state) is settled by SPECIFICATION §6/§15; only these mechanics are open.
 
 ## 16.3 On-demand fetch & optional convenience cache
 
